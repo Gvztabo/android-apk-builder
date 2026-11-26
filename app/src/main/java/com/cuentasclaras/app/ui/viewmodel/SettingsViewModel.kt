@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.ui.viewmodel
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@Immutable
 data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
     val bcvRate: BcvRateInfo? = null,
@@ -44,21 +46,21 @@ class SettingsViewModel(
         ),
         combine(
             isRefreshingRate,
-            repository.observeAccounts(),
-            repository.observeInvoices(),
+            repository.observeAccountCount(),
+            repository.observeInvoiceCount(),
             ::Triple
         )
     ) { left, right ->
         val (settings, rate, history) = left
-        val (refreshing, accounts, invoices) = right
+        val (refreshing, accountsCount, invoicesCount) = right
 
         SettingsUiState(
             settings = settings,
             bcvRate = rate,
             bcvHistory = history,
             isRefreshingRate = refreshing,
-            accountsCount = accounts.size,
-            invoicesCount = invoices.size
+            accountsCount = accountsCount,
+            invoicesCount = invoicesCount
         )
     }.stateIn(
         scope = viewModelScope,

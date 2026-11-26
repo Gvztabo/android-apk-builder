@@ -11,38 +11,39 @@ fun createAppTypography(largeText: Boolean): Typography {
         headlineMedium = TextStyle(
             fontWeight = FontWeight.Bold,
             fontSize = 26.sp * scale,
-            lineHeight = 32.sp * scale
+            lineHeight = 32.sp * scale,
+            fontFeatureSettings = "tnum"
         ),
         titleLarge = TextStyle(
             fontWeight = FontWeight.Bold,
-            fontSize = 22.sp * scale,
-            lineHeight = 28.sp * scale,
+            fontSize = 20.sp * scale,
+            lineHeight = 26.sp * scale,
             fontFeatureSettings = "tnum"
         ),
         titleMedium = TextStyle(
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 19.sp * scale,
-            lineHeight = 26.sp * scale
-        ),
-        bodyLarge = TextStyle(
-            fontWeight = FontWeight.Normal,
+            fontWeight = FontWeight.Bold,
             fontSize = 17.sp * scale,
             lineHeight = 24.sp * scale
         ),
+        bodyLarge = TextStyle(
+            fontWeight = FontWeight.Normal,
+            fontSize = 15.5.sp * scale,
+            lineHeight = 22.sp * scale
+        ),
         bodyMedium = TextStyle(
             fontWeight = FontWeight.Normal,
-            fontSize = 15.sp * scale,
-            lineHeight = 22.sp * scale
+            fontSize = 14.sp * scale,
+            lineHeight = 20.sp * scale
         ),
         labelLarge = TextStyle(
             fontWeight = FontWeight.SemiBold,
-            fontSize = 16.sp * scale,
-            lineHeight = 22.sp * scale
+            fontSize = 15.sp * scale,
+            lineHeight = 20.sp * scale
         ),
         labelMedium = TextStyle(
             fontWeight = FontWeight.Medium,
-            fontSize = 14.sp * scale,
-            lineHeight = 20.sp * scale
+            fontSize = 12.5.sp * scale,
+            lineHeight = 18.sp * scale
         )
     )
 }

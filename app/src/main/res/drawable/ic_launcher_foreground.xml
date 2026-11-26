@@ -5,45 +5,43 @@
     android:viewportWidth="100"
     android:viewportHeight="100">
 
-    <!-- White Calculator (Base Layer, centered inside adaptive safe zone) -->
+    <!-- Centered White Calculator (Base Layer inside adaptive safe zone) -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
         android:strokeWidth="3.6"
         android:strokeLineJoin="round"
-        android:pathData="M31.5,27 h22 a5,5 0 0 1 5,5 v26 a5,5 0 0 1 -5,5 h-22 a5,5 0 0 1 -5,-5 v-26 a5,5 0 0 1 5,-5 z" />
+        android:pathData="M34.5,27 h31 a5.5,5.5 0 0 1 5.5,5.5 v35 a5.5,5.5 0 0 1 -5.5,5.5 h-31 a5.5,5.5 0 0 1 -5.5,-5.5 v-35 a5.5,5.5 0 0 1 5.5,-5.5 z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M32.5,32.5 h20 a1.8,1.8 0 0 1 1.8,1.8 v3.8 a1.8,1.8 0 0 1 -1.8,1.8 h-20 a1.8,1.8 0 0 1 -1.8,-1.8 v-3.8 a1.8,1.8 0 0 1 1.8,-1.8 z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M32,43.5 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M40.7,43.5 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M49.4,43.5 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M32,52 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M40.7,52 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M49.4,52 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
+        android:pathData="M36,33 h28 a2,2 0 0 1 2,2 v3.8 a2,2 0 0 1 -2,2 h-28 a2,2 0 0 1 -2,-2 v-3.8 a2,2 0 0 1 2,-2 z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M35.5,46 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M60.9,46 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M35.5,57.5 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M60.9,57.5 h3.6 a1.2,1.2 0 0 1 1.2,1.2 v2.4 a1.2,1.2 0 0 1 -1.2,1.2 h-3.6 a1.2,1.2 0 0 1 -1.2,-1.2 v-2.4 a1.2,1.2 0 0 1 1.2,-1.2 z" />
 
-    <!-- Emerald Halo Cutout -->
+    <!-- Centered Emerald Halo Cutout -->
     <path
         android:fillColor="#0F6E56"
-        android:pathData="M59,60 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0" />
+        android:pathData="M50,55.5 m-11.2,0 a11.2,11.2 0 1,0 22.4,0 a11.2,11.2 0 1,0 -22.4,0" />
 
-    <!-- White Reload Symbol (Top Layer) -->
+    <!-- Centered White Reload Symbol (Top Layer) -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="3.4"
+        android:strokeWidth="3.1"
         android:strokeLineCap="round"
-        android:pathData="M50.8,56.2 A9,9 0 0 1 66.4,54.8" />
+        android:pathData="M42.7,52.1 A8,8 0 0 1 56.5,50.9" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M68.9,58.3 L68.9,51.7 L63.4,55.9 Z" />
+        android:pathData="M58.9,54.2 L58.9,47.9 L53.7,51.9 Z" />
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="3.4"
+        android:strokeWidth="3.1"
         android:strokeLineCap="round"
-        android:pathData="M67.2,63.8 A9,9 0 0 1 51.6,65.2" />
+        android:pathData="M57.3,58.9 A8,8 0 0 1 43.5,60.1" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M49.1,61.7 L49.1,68.3 L54.6,64.1 Z" />
+        android:pathData="M41.1,56.8 L41.1,63.1 L46.3,59.1 Z" />
 </vector>

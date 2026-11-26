@@ -3,10 +3,12 @@ package com.cuentasclaras.app.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,8 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -31,11 +34,8 @@ import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,11 +45,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -68,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cuentasclaras.app.data.local.entity.EstadoFactura
@@ -76,7 +79,9 @@ import com.cuentasclaras.app.data.repository.PaymentAllocation
 import com.cuentasclaras.app.ui.components.CurrencySegmentedSelector
 import com.cuentasclaras.app.ui.components.DeleteInvoiceConfirmDialog
 import com.cuentasclaras.app.ui.components.DualCurrencyText
-import com.cuentasclaras.app.ui.components.EmptyStateView
+import com.cuentasclaras.app.ui.components.GroupedCardHeader
+import com.cuentasclaras.app.ui.components.GroupedCardItemSlice
+import com.cuentasclaras.app.ui.theme.AdjustAmber
 import com.cuentasclaras.app.ui.theme.EmeraldPrimary
 import com.cuentasclaras.app.ui.theme.ExpenseRed
 import com.cuentasclaras.app.ui.theme.IncomeGreen
@@ -142,112 +147,149 @@ fun InvoiceEditorScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = {
-                    val factura = invoiceWithItems?.factura
-                    if (factura != null) {
-                        Column {
+            Column {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    title = {
+                        val factura = invoiceWithItems?.factura
+                        if (factura != null) {
+                            val formattedDate = remember(factura.id, factura.fecha) {
+                                CurrencyFormatter.formatDate(factura.fecha)
+                            }
+                            Column {
+                                Text(
+                                    text = factura.displayName(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = "Factura #${factura.numeroFactura} ·",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = factura.estado.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (factura.estado == EstadoFactura.PAGADA) IncomeGreen else AdjustAmber
+                                    )
+                                    Text(
+                                        text = "· $formattedDate",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        } else {
                             Text(
-                                text = factura.displayName(),
+                                text = "Factura",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = "Factura #${factura.numeroFactura} · ${factura.estado.name}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
-                    } else {
-                        Text("Factura", style = MaterialTheme.typography.titleMedium)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver"
-                        )
-                    }
-                },
-                actions = {
-                    if (invoiceWithItems != null) {
-                        IconButton(
-                            onClick = {
-                                renameText = invoiceWithItems.factura.displayName()
-                                showRenameDialog = true
-                            },
-                            modifier = Modifier.size(48.dp)
-                        ) {
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
                             Icon(
-                                imageVector = Icons.Outlined.Edit,
-                                contentDescription = "Editar nombre de factura"
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Volver"
                             )
                         }
-                        IconButton(
-                            onClick = { showDeleteDialog = true },
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.DeleteOutline,
-                                contentDescription = "Eliminar factura"
-                            )
+                    },
+                    actions = {
+                        if (invoiceWithItems != null) {
+                            IconButton(
+                                onClick = {
+                                    renameText = invoiceWithItems.factura.displayName()
+                                    showRenameDialog = true
+                                },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = "Editar nombre de factura"
+                                )
+                            }
+                            IconButton(
+                                onClick = { showDeleteDialog = true },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.DeleteOutline,
+                                    contentDescription = "Eliminar factura"
+                                )
+                            }
                         }
                     }
-                }
-            )
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            }
         }
     ) { padding ->
         if (invoiceWithItems == null) {
             return@Scaffold
         }
 
+        val isDark = MaterialTheme.colorScheme.background.red < 0.2f
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(16.dp)
         ) {
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            // Total & Account Selection Card (Clean White/Dark Surface matching Web)
+            item(key = "invoice_summary", contentType = "summary") {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Text(
-                            text = "Total de la factura",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-                        )
-                        DualCurrencyText(
-                            amountUsd = invoiceTotal,
-                            bcvRate = bcvRate,
-                            primaryStyle = MaterialTheme.typography.titleLarge,
-                            primaryColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            secondaryColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Total de la factura",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            DualCurrencyText(
+                                amountUsd = invoiceTotal,
+                                bcvRate = bcvRate,
+                                primaryStyle = MaterialTheme.typography.headlineMedium,
+                                primaryColor = MaterialTheme.colorScheme.onSurface,
+                                secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
 
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
-                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                         if (isDraft) {
                             if (uiState.accounts.isEmpty()) {
                                 Text(
                                     text = "Sin cuentas registradas",
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             } else {
                                 if (selectedAccounts.isEmpty()) {
                                     Button(
                                         onClick = { showAccountPickerSheet = true },
                                         enabled = invoiceTotal > 0.0,
+                                        shape = RoundedCornerShape(16.dp),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = EmeraldPrimary,
                                             contentColor = Color.White
@@ -256,12 +298,18 @@ fun InvoiceEditorScreen(
                                             .fillMaxWidth()
                                             .height(50.dp)
                                     ) {
-                                        Icon(Icons.Outlined.AccountBalanceWallet, contentDescription = null)
-                                        Text(" Seleccionar cuentas", style = MaterialTheme.typography.labelLarge)
+                                        Icon(
+                                            imageVector = Icons.Outlined.AccountBalanceWallet,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Seleccionar cuentas", style = MaterialTheme.typography.labelLarge)
                                     }
                                 } else {
                                     OutlinedButton(
                                         onClick = { showAccountPickerSheet = true },
+                                        shape = RoundedCornerShape(16.dp),
                                         colors = ButtonDefaults.outlinedButtonColors(
                                             containerColor = Color.White,
                                             contentColor = Color(0xFF0F172A)
@@ -271,9 +319,14 @@ fun InvoiceEditorScreen(
                                             .fillMaxWidth()
                                             .height(50.dp)
                                     ) {
-                                        Icon(Icons.Outlined.AccountBalanceWallet, contentDescription = null)
+                                        Icon(
+                                            imageVector = Icons.Outlined.AccountBalanceWallet,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = " Seleccionar cuentas (${selectedAccounts.size})",
+                                            text = "Seleccionar cuentas (${selectedAccounts.size})",
                                             style = MaterialTheme.typography.labelLarge
                                         )
                                     }
@@ -281,60 +334,74 @@ fun InvoiceEditorScreen(
                                     Text(
                                         text = "Cuentas: ${selectedAccounts.joinToString(", ") { it.cuenta.nombre }}",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
 
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(
-                                            text = "Saldo disponible",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
-                                        )
-                                        DualCurrencyText(
-                                            amountUsd = selectedTotal,
-                                            bcvRate = bcvRate,
-                                            primaryStyle = MaterialTheme.typography.titleMedium,
-                                            primaryColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            secondaryColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
-                                            horizontalAlignment = Alignment.Start
-                                        )
-                                    }
-
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(
-                                            text = "Saldo disponible luego de pagar",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
-                                        )
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
-                                            DualCurrencyText(
-                                                amountUsd = diffAfterPay,
-                                                bcvRate = bcvRate,
-                                                primaryStyle = MaterialTheme.typography.titleMedium,
-                                                primaryColor = if (isSufficient) IncomeGreen else ExpenseRed,
-                                                secondaryColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
-                                                horizontalAlignment = Alignment.Start
-                                            )
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = if (isSufficient) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
-                                                    contentDescription = null,
-                                                    tint = if (isSufficient) IncomeGreen else ExpenseRed,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                                 Text(
-                                                    text = if (isSufficient) "Alcanza" else "No alcanza",
-                                                    color = if (isSufficient) IncomeGreen else ExpenseRed,
+                                                    text = "Saldo disponible",
                                                     style = MaterialTheme.typography.bodyLarge,
-                                                    fontWeight = FontWeight.Bold
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
+                                                DualCurrencyText(
+                                                    amountUsd = selectedTotal,
+                                                    bcvRate = bcvRate,
+                                                    primaryStyle = MaterialTheme.typography.titleMedium,
+                                                    primaryColor = MaterialTheme.colorScheme.onSurface,
+                                                    secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    horizontalAlignment = Alignment.Start
+                                                )
+                                            }
+
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text(
+                                                    text = "Saldo disponible luego de pagar",
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    DualCurrencyText(
+                                                        amountUsd = diffAfterPay,
+                                                        bcvRate = bcvRate,
+                                                        primaryStyle = MaterialTheme.typography.titleMedium,
+                                                        primaryColor = if (isSufficient) IncomeGreen else ExpenseRed,
+                                                        secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        horizontalAlignment = Alignment.Start
+                                                    )
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(
+                                                            imageVector = if (isSufficient) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
+                                                            contentDescription = null,
+                                                            tint = if (isSufficient) IncomeGreen else ExpenseRed,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(
+                                                            text = if (isSufficient) "Alcanza" else "No alcanza",
+                                                            color = if (isSufficient) IncomeGreen else ExpenseRed,
+                                                            style = MaterialTheme.typography.bodyLarge,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -355,6 +422,7 @@ fun InvoiceEditorScreen(
                                             }
                                         },
                                         enabled = isSufficient && invoiceTotal > 0.0,
+                                        shape = RoundedCornerShape(16.dp),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = EmeraldPrimary,
                                             contentColor = Color.White
@@ -371,38 +439,51 @@ fun InvoiceEditorScreen(
                             OutlinedButton(
                                 onClick = {},
                                 enabled = false,
+                                shape = RoundedCornerShape(16.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(50.dp)
                             ) {
                                 Icon(Icons.Outlined.CheckCircle, contentDescription = null)
-                                Text(" Factura pagada", style = MaterialTheme.typography.labelLarge)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Factura pagada", style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // Add Item Button or Form (Draft Only)
             if (isDraft) {
-                item {
+                item(key = "add_item_section", contentType = "add_item") {
                     if (!showAddForm) {
-                        FilledTonalButton(
+                        Button(
                             onClick = { showAddForm = true },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isDark) EmeraldPrimary else Color(0xFF0F172A),
+                                contentColor = Color.White
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp)
                         ) {
-                            Icon(Icons.Outlined.Add, contentDescription = null)
-                            Text(" Añadir producto", style = MaterialTheme.typography.labelLarge)
+                            Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Añadir producto", style = MaterialTheme.typography.labelLarge)
                         }
                     } else {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                                modifier = Modifier.padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -411,10 +492,11 @@ fun InvoiceEditorScreen(
                                 ) {
                                     Text(
                                         text = "Añadir producto",
-                                        style = MaterialTheme.typography.titleMedium
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
                                     )
                                     TextButton(onClick = { showAddForm = false }) {
-                                        Text("Cerrar")
+                                        Text("Cerrar", style = MaterialTheme.typography.labelLarge)
                                     }
                                 }
 
@@ -436,6 +518,7 @@ fun InvoiceEditorScreen(
                                     value = itemPriceText,
                                     onValueChange = { itemPriceText = it },
                                     label = { Text("Precio unitario ($itemCurrency)") },
+                                    placeholder = { Text("0.00") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     singleLine = true,
                                     modifier = Modifier
@@ -451,33 +534,31 @@ fun InvoiceEditorScreen(
                                     Text(
                                         text = "Cantidad",
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        FilledTonalButton(
-                                            onClick = { if (itemQty > 1) itemQty -= 1 },
+                                        StepperIconButton(
+                                            icon = Icons.Outlined.Remove,
+                                            contentDescription = "Disminuir cantidad",
                                             enabled = itemQty > 1,
-                                            contentPadding = PaddingValues(0.dp),
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Icon(Icons.Outlined.Remove, contentDescription = "Disminuir cantidad")
-                                        }
+                                            onClick = { if (itemQty > 1) itemQty -= 1 }
+                                        )
                                         Text(
                                             text = "$itemQty",
-                                            style = MaterialTheme.typography.titleLarge,
+                                            style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 10.dp)
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.width(38.dp)
                                         )
-                                        FilledTonalButton(
-                                            onClick = { itemQty += 1 },
-                                            contentPadding = PaddingValues(0.dp),
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Icon(Icons.Outlined.Add, contentDescription = "Aumentar cantidad")
-                                        }
+                                        StepperIconButton(
+                                            icon = Icons.Outlined.Add,
+                                            contentDescription = "Aumentar cantidad",
+                                            enabled = true,
+                                            onClick = { itemQty += 1 }
+                                        )
                                     }
                                 }
 
@@ -507,79 +588,128 @@ fun InvoiceEditorScreen(
                                         }
                                     },
                                     enabled = priceUsd != null && priceUsd >= 0.0 && itemQty > 0,
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = EmeraldPrimary,
+                                        contentColor = Color.White
+                                    ),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(48.dp)
                                 ) {
-                                    Icon(Icons.Outlined.Add, contentDescription = null)
-                                    Text(" Agregar a la factura", style = MaterialTheme.typography.labelLarge)
+                                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Agregar a la factura", style = MaterialTheme.typography.labelLarge)
                                 }
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            item {
-                Text(
-                    text = "Productos",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 4.dp)
+            // Virtualized Grouped Line Items Header & Rows matching Web
+            item(key = "products_header", contentType = "products_header") {
+                val lineCount = invoiceWithItems.items.size
+                GroupedCardHeader(
+                    title = "Productos",
+                    trailing = if (lineCount == 1) "1 línea" else "$lineCount líneas"
                 )
             }
 
             if (invoiceWithItems.items.isEmpty()) {
-                item {
-                    EmptyStateView(
-                        icon = Icons.Outlined.ShoppingBag,
-                        title = "La factura está vacía",
-                        subtitle = "Toca \"Añadir producto\" para agregar artículos a esta factura."
-                    )
-                }
-            } else {
-                items(invoiceWithItems.items, key = { it.id }) { item ->
-                    if (isDraft) {
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { value ->
-                                if (value == SwipeToDismissBoxValue.EndToStart) {
-                                    viewModel.deleteItem(item)
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-                        )
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = false,
-                            backgroundContent = {}
+                item(key = "empty_products", contentType = "empty") {
+                    GroupedCardItemSlice(
+                        isFirst = true,
+                        isLast = true,
+                        hasHeader = true
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            InvoiceItemCard(
-                                item = item,
-                                bcvRate = bcvRate,
-                                isDraft = true,
-                                onIncrement = { viewModel.updateItemQuantity(item, item.cantidad + 1) },
-                                onDecrement = {
-                                    if (item.cantidad > 1) {
-                                        viewModel.updateItemQuantity(item, item.cantidad - 1)
-                                    }
-                                },
-                                onEdit = { editingItem = item },
-                                onDelete = { viewModel.deleteItem(item) }
+                            Icon(
+                                imageVector = Icons.Outlined.ShoppingBag,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(34.dp)
+                            )
+                            Text(
+                                text = "La factura está vacía",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Toca \"Añadir producto\" para agregar artículos a esta factura.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
                         }
-                    } else {
-                        InvoiceItemCard(
-                            item = item,
-                            bcvRate = bcvRate,
-                            isDraft = false,
-                            onIncrement = {},
-                            onDecrement = {},
-                            onEdit = {},
-                            onDelete = {}
-                        )
                     }
                 }
+            } else {
+                itemsIndexed(
+                    items = invoiceWithItems.items,
+                    key = { _, item -> item.id },
+                    contentType = { _, _ -> "invoice_item_row" }
+                ) { index, item ->
+                    GroupedCardItemSlice(
+                        isFirst = index == 0,
+                        isLast = index == invoiceWithItems.items.lastIndex,
+                        hasHeader = true
+                    ) {
+                        if (isDraft) {
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    if (value == SwipeToDismissBoxValue.EndToStart) {
+                                        viewModel.deleteItem(item)
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                            )
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {}
+                            ) {
+                                InvoiceItemRow(
+                                    item = item,
+                                    bcvRate = bcvRate,
+                                    isDraft = true,
+                                    onIncrement = { viewModel.updateItemQuantity(item, item.cantidad + 1) },
+                                    onDecrement = {
+                                        if (item.cantidad > 1) {
+                                            viewModel.updateItemQuantity(item, item.cantidad - 1)
+                                        }
+                                    },
+                                    onEdit = { editingItem = item },
+                                    onDelete = { viewModel.deleteItem(item) }
+                                )
+                            }
+                        } else {
+                            InvoiceItemRow(
+                                item = item,
+                                bcvRate = bcvRate,
+                                isDraft = false,
+                                onIncrement = {},
+                                onDecrement = {},
+                                onEdit = {},
+                                onDelete = {}
+                            )
+                        }
+                    }
+                }
+            }
+
+            item(key = "bottom_spacer", contentType = "spacer") {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -612,11 +742,12 @@ fun InvoiceEditorScreen(
     if (showRenameDialog && invoiceWithItems != null) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("Nombre de la factura", style = MaterialTheme.typography.titleLarge) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Si lo dejas vacío, se usará \"Factura #${invoiceWithItems.factura.numeroFactura}\".",
+                        text = "Si lo dejas vacío, se guardará como \"Factura #${invoiceWithItems.factura.numeroFactura}\".",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -652,7 +783,8 @@ fun InvoiceEditorScreen(
 
         ModalBottomSheet(
             onDismissRequest = { showAccountPickerSheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
@@ -663,7 +795,8 @@ fun InvoiceEditorScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = "Seleccionar cuentas",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "${invoiceWithItems.factura.displayName()} — Total: ${CurrencyFormatter.formatDual(invoiceTotal, bcvRate)}",
@@ -671,8 +804,6 @@ fun InvoiceEditorScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                HorizontalDivider()
 
                 if (uiState.accounts.isEmpty()) {
                     Text(
@@ -682,69 +813,85 @@ fun InvoiceEditorScreen(
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
                 } else {
-                    Column(
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        uiState.accounts.forEach { acc ->
-                            val isChecked = selectedAccountIds[acc.cuenta.id] == true
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        selectedAccountIds[acc.cuenta.id] = !isChecked
-                                    }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Checkbox(
-                                    checked = isChecked,
-                                    onCheckedChange = {
-                                        selectedAccountIds[acc.cuenta.id] = it
-                                    }
-                                )
-                                Column(
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            uiState.accounts.forEachIndexed { index, acc ->
+                                val isChecked = selectedAccountIds[acc.cuenta.id] == true
+                                Row(
                                     modifier = Modifier
-                                        .weight(1f)
-                                        .padding(top = 6.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedAccountIds[acc.cuenta.id] = !isChecked
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.Top
                                 ) {
-                                    Text(
-                                        text = acc.cuenta.nombre,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = {
+                                            selectedAccountIds[acc.cuenta.id] = it
+                                        }
                                     )
-                                    Text(
-                                        text = CurrencyFormatter.formatDual(acc.saldoActual, bcvRate),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(top = 6.dp),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(
+                                            text = acc.cuenta.nombre,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = CurrencyFormatter.formatDual(acc.saldoActual, bcvRate),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                if (index < uiState.accounts.lastIndex) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.65f))
                                 }
                             }
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         }
                     }
                 }
 
                 if (selectedAccounts.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = "Saldo disponible: ${CurrencyFormatter.formatDual(selectedTotal, bcvRate)}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Luego de pagar: ${CurrencyFormatter.formatDual(diffAfterPay, bcvRate)}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSufficient) IncomeGreen else ExpenseRed
-                        )
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Saldo disponible: ${CurrencyFormatter.formatDual(selectedTotal, bcvRate)}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Luego de pagar: ${CurrencyFormatter.formatDual(diffAfterPay, bcvRate)}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSufficient) IncomeGreen else ExpenseRed
+                            )
+                        }
                     }
                 }
 
@@ -755,6 +902,8 @@ fun InvoiceEditorScreen(
                     if (selectedAccounts.isNotEmpty()) {
                         OutlinedButton(
                             onClick = { selectedAccountIds.clear() },
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(50.dp)
@@ -764,6 +913,7 @@ fun InvoiceEditorScreen(
                     }
                     Button(
                         onClick = { showAccountPickerSheet = false },
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = EmeraldPrimary,
                             contentColor = Color.White
@@ -787,21 +937,30 @@ fun InvoiceEditorScreen(
         val normalizedAfterPay = if (abs(afterPay) < 0.005) 0.0 else afterPay
         AlertDialog(
             onDismissRequest = { showSingleConfirmDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text("Confirmar pago", style = MaterialTheme.typography.titleLarge)
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
                         text = "Se descontará ${CurrencyFormatter.formatDual(invoiceTotal, bcvRate)} de la cuenta \"${onlyAcc.cuenta.nombre}\".",
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Text(
-                        text = "Saldo disponible luego de pagar: ${CurrencyFormatter.formatDual(normalizedAfterPay, bcvRate)}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = IncomeGreen
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Saldo disponible luego de pagar: ${CurrencyFormatter.formatDual(normalizedAfterPay, bcvRate)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = IncomeGreen,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -839,6 +998,7 @@ fun InvoiceEditorScreen(
 
         AlertDialog(
             onDismissRequest = { showSplitDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text("Distribuir pago", style = MaterialTheme.typography.titleLarge)
             },
@@ -887,7 +1047,7 @@ fun InvoiceEditorScreen(
                         }
                     }
 
-                    HorizontalDivider()
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                     Text(
                         text = "Asignado: ${CurrencyFormatter.formatUsd(allocatedSum)} / ${CurrencyFormatter.formatUsd(invoiceTotal)}",
@@ -924,7 +1084,36 @@ fun InvoiceEditorScreen(
 }
 
 @Composable
-private fun InvoiceItemCard(
+private fun StepperIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (enabled) 0.9f else 0.45f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.size(46.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(enabled = enabled, onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun InvoiceItemRow(
     item: ItemFactura,
     bcvRate: Double?,
     isDraft: Boolean,
@@ -934,74 +1123,79 @@ private fun InvoiceItemCard(
     onDelete: () -> Unit
 ) {
     val subtotal = item.precioUnitario * item.cantidad
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = item.nombre ?: "Artículo sin nombre",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${CurrencyFormatter.formatDualBsFirst(item.precioUnitario, bcvRate)} × ${item.cantidad}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                DualCurrencyText(
-                    amountUsd = subtotal,
-                    bcvRate = bcvRate,
-                    primaryStyle = MaterialTheme.typography.titleLarge,
-                    horizontalAlignment = Alignment.Start
-                )
-            }
+            Text(
+                text = item.nombre ?: "Artículo sin nombre",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "${CurrencyFormatter.formatDualBsFirst(item.precioUnitario, bcvRate)} × ${item.cantidad}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            DualCurrencyText(
+                amountUsd = subtotal,
+                bcvRate = bcvRate,
+                primaryStyle = MaterialTheme.typography.titleLarge,
+                horizontalAlignment = Alignment.Start
+            )
+        }
 
-            if (isDraft) {
+        if (isDraft) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilledTonalButton(
-                            onClick = onDecrement,
-                            enabled = item.cantidad > 1,
-                            contentPadding = PaddingValues(0.dp),
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(Icons.Outlined.Remove, contentDescription = "Disminuir cantidad")
-                        }
-                        Text(
-                            text = "${item.cantidad}",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                    StepperIconButton(
+                        icon = Icons.Outlined.Remove,
+                        contentDescription = "Disminuir cantidad",
+                        enabled = item.cantidad > 1,
+                        onClick = onDecrement
+                    )
+                    Text(
+                        text = "${item.cantidad}",
+                        style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.width(34.dp)
+                    )
+                    StepperIconButton(
+                        icon = Icons.Outlined.Add,
+                        contentDescription = "Aumentar cantidad",
+                        enabled = true,
+                        onClick = onIncrement
+                    )
+                }
+                Row {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Editar precio o cantidad",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        FilledTonalButton(
-                            onClick = onIncrement,
-                            contentPadding = PaddingValues(0.dp),
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(Icons.Outlined.Add, contentDescription = "Aumentar cantidad")
-                        }
                     }
-                    Row {
-                        IconButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
-                            Icon(Icons.Outlined.Edit, contentDescription = "Editar precio o cantidad")
-                        }
-                        IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                            Icon(Icons.Outlined.DeleteOutline, contentDescription = "Eliminar artículo")
-                        }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.DeleteOutline,
+                            contentDescription = "Eliminar artículo",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -1022,7 +1216,7 @@ private fun EditInvoiceItemDialog(
     var precioText by remember { mutableStateOf(String.format(Locale.US, "%.2f", item.precioUnitario)) }
     var qtyText by remember { mutableStateOf(item.cantidad.toString()) }
 
-    val rawPrecio = precioText.toDoubleOrNull()
+    val rawPrecio = precioText.replace(',', '.').toDoubleOrNull()
     val precioUsd = when {
         rawPrecio == null -> null
         itemCurrency == "BS" && rateAvailable -> rawPrecio / bcvRate!!
@@ -1031,6 +1225,7 @@ private fun EditInvoiceItemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text("Editar artículo", style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1081,7 +1276,7 @@ private fun EditInvoiceItemDialog(
         },
         confirmButton = {
             val qty = qtyText.toIntOrNull()
-            TextButton(
+            Button(
                 onClick = {
                     if (precioUsd != null && qty != null && qty > 0) {
                         onSave(nombre, precioUsd, qty)

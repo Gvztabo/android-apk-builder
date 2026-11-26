@@ -1,10 +1,12 @@
 package com.cuentasclaras.app.data.local
 
 import android.content.Context
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+@Immutable
 data class AppSettings(
     val isDarkTheme: Boolean = false,
     val largeText: Boolean = false,

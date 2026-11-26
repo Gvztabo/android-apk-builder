@@ -1,32 +1,38 @@
 package com.cuentasclaras.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,9 +41,11 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,8 +55,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -59,6 +69,8 @@ import com.cuentasclaras.app.data.local.entity.Transaccion
 import com.cuentasclaras.app.ui.components.CurrencySegmentedSelector
 import com.cuentasclaras.app.ui.components.DualCurrencyText
 import com.cuentasclaras.app.ui.components.EmptyStateView
+import com.cuentasclaras.app.ui.components.GroupedCardHeader
+import com.cuentasclaras.app.ui.components.GroupedCardItemSlice
 import com.cuentasclaras.app.ui.theme.AdjustAmber
 import com.cuentasclaras.app.ui.theme.EmeraldPrimary
 import com.cuentasclaras.app.ui.theme.ExpenseRed
@@ -78,87 +90,125 @@ fun AccountDetailScreen(
     val account = uiState.account
     var showTransactionSheet by remember { mutableStateOf(false) }
     var showAdjustDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = { Text(account?.cuenta?.nombre ?: "Detalle de Cuenta") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver"
+            Column {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    title = {
+                        Text(
+                            text = account?.cuenta?.nombre ?: "Detalle de Cuenta",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Volver"
+                            )
+                        }
+                    },
+                    actions = {
+                        if (account != null) {
+                            IconButton(
+                                onClick = { showDeleteAccountDialog = true },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.DeleteOutline,
+                                    contentDescription = "Eliminar cuenta",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
-                }
-            )
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            }
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(16.dp)
         ) {
             if (account != null) {
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                item(key = "account_summary", contentType = "summary") {
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                text = "Saldo actual",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            DualCurrencyText(
-                                amountUsd = account.saldoActual,
-                                bcvRate = uiState.bcvRate?.usdRate,
-                                primaryStyle = MaterialTheme.typography.titleLarge
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = "Saldo inicial: ${CurrencyFormatter.formatDual(account.cuenta.saldoInicial, uiState.bcvRate?.usdRate)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Saldo actual",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                DualCurrencyText(
+                                    amountUsd = account.saldoActual,
+                                    bcvRate = uiState.bcvRate?.usdRate,
+                                    primaryStyle = MaterialTheme.typography.headlineMedium
+                                )
+                            }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Button(
                                     onClick = { showTransactionSheet = true },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = EmeraldPrimary,
+                                        contentColor = Color.White
+                                    ),
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(48.dp)
                                 ) {
-                                    Icon(Icons.Outlined.Add, contentDescription = null)
-                                    Text(" Movimiento")
+                                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Text(" Movimiento", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                                 }
                                 OutlinedButton(
                                     onClick = { showAdjustDialog = true },
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(48.dp)
                                 ) {
-                                    Icon(Icons.Outlined.Tune, contentDescription = null)
-                                    Text(" Ajustar saldo")
+                                    Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Text(" Ajustar saldo", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
                     }
-                }
-
-                item {
-                    Text(
-                        text = "Historial de movimientos",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 if (uiState.transactions.isEmpty()) {
-                    item {
+                    item(key = "empty_transactions", contentType = "empty") {
                         EmptyStateView(
                             icon = Icons.Outlined.Receipt,
                             title = "Aún no hay movimientos",
@@ -166,17 +216,71 @@ fun AccountDetailScreen(
                         )
                     }
                 } else {
-                    items(uiState.transactions, key = { it.id }) { tx ->
-                        TransactionRow(
-                            tx = tx,
-                            bcvRate = uiState.bcvRate?.usdRate,
-                            onInvoiceClick = onInvoiceClick
+                    item(key = "history_header", contentType = "history_header") {
+                        val regLabel = if (uiState.transactions.size == 1) "1 registro" else "${uiState.transactions.size} registros"
+                        GroupedCardHeader(
+                            title = "Historial de movimientos",
+                            trailing = regLabel
                         )
-                        HorizontalDivider()
                     }
+
+                    itemsIndexed(
+                        items = uiState.transactions,
+                        key = { _, tx -> tx.id },
+                        contentType = { _, _ -> "transaction_row" }
+                    ) { index, tx ->
+                        GroupedCardItemSlice(
+                            isFirst = index == 0,
+                            isLast = index == uiState.transactions.lastIndex,
+                            hasHeader = true
+                        ) {
+                            TransactionRow(
+                                tx = tx,
+                                bcvRate = uiState.bcvRate?.usdRate,
+                                onInvoiceClick = onInvoiceClick
+                            )
+                        }
+                    }
+                }
+
+                item(key = "bottom_spacer", contentType = "spacer") {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
+    }
+
+    if (showDeleteAccountDialog && account != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("¿Eliminar cuenta?", style = MaterialTheme.typography.titleLarge) },
+            text = {
+                Text(
+                    text = "Se eliminará \"${account.cuenta.nombre}\" y todos sus movimientos asociados. Esta acción no se puede deshacer.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteAccountDialog = false
+                        viewModel.deleteAccount(onBack)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ExpenseRed,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Eliminar", style = MaterialTheme.typography.labelLarge)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAccountDialog = false }) {
+                    Text("Cancelar", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        )
     }
 
     if (showTransactionSheet) {
@@ -210,7 +314,8 @@ fun AccountDetailScreen(
 
         ModalBottomSheet(
             onDismissRequest = { showTransactionSheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
@@ -219,21 +324,43 @@ fun AccountDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Nuevo movimiento",
-                    style = MaterialTheme.typography.titleLarge
+                    text = "Registrar movimiento",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = tipo == TipoTransaccion.GASTO,
-                        onClick = { tipo = TipoTransaccion.GASTO },
-                        label = { Text("Gasto (GASTO)", style = MaterialTheme.typography.bodyLarge) }
-                    )
-                    FilterChip(
-                        selected = tipo == TipoTransaccion.INGRESO,
-                        onClick = { tipo = TipoTransaccion.INGRESO },
-                        label = { Text("Ingreso (INGRESO)", style = MaterialTheme.typography.bodyLarge) }
-                    )
+                // Segmented GASTO / INGRESO matching Web
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(TipoTransaccion.GASTO, TipoTransaccion.INGRESO).forEach { option ->
+                        val selected = tipo == option
+                        val activeColor = if (option == TipoTransaccion.GASTO) ExpenseRed else IncomeGreen
+                        Surface(
+                            shape = RoundedCornerShape(9.dp),
+                            color = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                            border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(9.dp))
+                                .clickable { tipo = option }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = option.name,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (selected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
 
                 CurrencySegmentedSelector(
@@ -282,11 +409,19 @@ fun AccountDetailScreen(
                         }
                     },
                     enabled = parsedAmountUsd != null && parsedAmountUsd > 0.0,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = EmeraldPrimary,
+                        contentColor = Color.White
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .height(50.dp)
                 ) {
-                    Text("Guardar movimiento", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        text = if (tipo == TipoTransaccion.INGRESO) "Guardar Ingreso" else "Guardar Gasto",
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -310,7 +445,7 @@ fun AccountDetailScreen(
         }
         var note by remember { mutableStateOf("") }
 
-        val rawDesired = desiredText.toDoubleOrNull()
+        val rawDesired = desiredText.replace(',', '.').toDoubleOrNull()
         val desiredUsd = when {
             rawDesired == null -> null
             adjustCurrency == "BS" && rateAvailable -> rawDesired / bcvRate!!
@@ -320,21 +455,23 @@ fun AccountDetailScreen(
 
         AlertDialog(
             onDismissRequest = { showAdjustDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("Ajustar saldo", style = MaterialTheme.typography.titleLarge) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Actual: ${CurrencyFormatter.formatDual(account.saldoActual, bcvRate)}",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = "Saldo actual: ${CurrencyFormatter.formatDual(account.saldoActual, bcvRate)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     CurrencySegmentedSelector(
                         selectedCurrency = adjustCurrency,
                         onSelectCurrency = { newCurrency ->
                             adjustCurrency = newCurrency
-                            if (newCurrency == "BS" && rateAvailable) {
-                                desiredText = String.format(Locale.US, "%.2f", account.saldoActual * bcvRate!!)
+                            desiredText = if (newCurrency == "BS" && rateAvailable) {
+                                String.format(Locale.US, "%.2f", account.saldoActual * bcvRate!!)
                             } else {
-                                desiredText = String.format(Locale.US, "%.2f", account.saldoActual)
+                                String.format(Locale.US, "%.2f", account.saldoActual)
                             }
                         },
                         bcvRateAvailable = rateAvailable
@@ -342,7 +479,7 @@ fun AccountDetailScreen(
                     OutlinedTextField(
                         value = desiredText,
                         onValueChange = { desiredText = it },
-                        label = { Text("Saldo deseado ($adjustCurrency)") },
+                        label = { Text("Nuevo saldo deseado ($adjustCurrency)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -350,7 +487,7 @@ fun AccountDetailScreen(
                     OutlinedTextField(
                         value = note,
                         onValueChange = { note = it },
-                        label = { Text("Motivo (opcional)") },
+                        label = { Text("Motivo del ajuste (opcional)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -358,7 +495,7 @@ fun AccountDetailScreen(
                         val sign = if (deltaUsd >= 0) "+" else ""
                         Text(
                             text = "Transacción AJUSTE: $sign${CurrencyFormatter.formatDual(deltaUsd, bcvRate)}",
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = AdjustAmber
                         )
@@ -366,7 +503,7 @@ fun AccountDetailScreen(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         if (desiredUsd != null) {
                             viewModel.adjustBalance(desiredUsd, note)
@@ -403,7 +540,15 @@ private fun TransactionRow(
         TipoTransaccion.GASTO -> ExpenseRed
         TipoTransaccion.AJUSTE -> AdjustAmber
     }
+    val icon = when (tx.tipo) {
+        TipoTransaccion.INGRESO -> Icons.Outlined.ArrowDownward
+        TipoTransaccion.GASTO -> Icons.Outlined.ArrowUpward
+        TipoTransaccion.AJUSTE -> Icons.Outlined.Tune
+    }
     val linkedFacturaId = tx.facturaId
+    val formattedDate = remember(tx.id, tx.fecha) {
+        CurrencyFormatter.formatDate(tx.fecha)
+    }
 
     Column(
         modifier = Modifier
@@ -415,64 +560,86 @@ private fun TransactionRow(
                     Modifier
                 }
             )
-            .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
         ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = tx.concepto ?: tx.tipo.name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "${tx.tipo.name} · ${CurrencyFormatter.formatDate(tx.fecha)}",
+                    text = "${tx.tipo.name} · $formattedDate",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
             if (linkedFacturaId != null) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Ir a la factura",
                     tint = EmeraldPrimary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
 
-        DualCurrencyText(
-            amountUsd = signedAmount,
-            bcvRate = bcvRate,
-            primaryStyle = MaterialTheme.typography.titleMedium,
-            primaryColor = tint,
-            horizontalAlignment = Alignment.Start
-        )
+        Column(
+            modifier = Modifier.padding(start = 52.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            DualCurrencyText(
+                amountUsd = signedAmount,
+                bcvRate = bcvRate,
+                primaryStyle = MaterialTheme.typography.titleMedium,
+                primaryColor = tint,
+                horizontalAlignment = Alignment.Start
+            )
 
-        if (linkedFacturaId != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.ReceiptLong,
-                    contentDescription = null,
-                    tint = EmeraldPrimary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = "Toca para abrir esta factura",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = EmeraldPrimary
-                )
+            if (linkedFacturaId != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ReceiptLong,
+                        contentDescription = null,
+                        tint = EmeraldPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Toca para abrir esta factura",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = EmeraldPrimary
+                    )
+                }
             }
         }
     }

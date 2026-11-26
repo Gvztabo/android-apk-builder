@@ -1,32 +1,43 @@
 package com.cuentasclaras.app.util
 
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
 
 object CurrencyFormatter {
-    private val usdFormat: NumberFormat = NumberFormat.getCurrencyInstance(Locale.US).apply {
-        minimumFractionDigits = 2
-        maximumFractionDigits = 2
+    private val esVeLocale = Locale("es", "VE")
+
+    private val usdFormatThreadLocal: ThreadLocal<NumberFormat> = ThreadLocal.withInitial {
+        NumberFormat.getCurrencyInstance(Locale.US).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
     }
 
-    private val bsNumberFormat: NumberFormat = NumberFormat.getNumberInstance(Locale("es", "VE")).apply {
-        minimumFractionDigits = 2
-        maximumFractionDigits = 2
+    private val bsFormatThreadLocal: ThreadLocal<NumberFormat> = ThreadLocal.withInitial {
+        NumberFormat.getNumberInstance(esVeLocale).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
     }
 
-    private val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("es", "VE"))
+    private val dateFormatter: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm", esVeLocale)
 
     fun formatUsd(amountUsd: Double): String {
-        val absFormatted = usdFormat.format(kotlin.math.abs(amountUsd))
+        val formatter = usdFormatThreadLocal.get()!!
+        val absFormatted = formatter.format(abs(amountUsd))
         return if (amountUsd < 0) "-$absFormatted" else absFormatted
     }
 
     fun formatBs(amountUsd: Double, bcvRate: Double?): String? {
         if (bcvRate == null || bcvRate <= 0.0) return null
         val bs = amountUsd * bcvRate
-        val absFormatted = bsNumberFormat.format(kotlin.math.abs(bs))
+        val formatter = bsFormatThreadLocal.get()!!
+        val absFormatted = formatter.format(abs(bs))
         return if (bs < 0) "-Bs. $absFormatted" else "Bs. $absFormatted"
     }
 
@@ -51,6 +62,8 @@ object CurrencyFormatter {
     }
 
     fun formatDate(timestamp: Long): String {
-        return dateFormat.format(Date(timestamp))
+        return Instant.ofEpochMilli(timestamp)
+            .atZone(ZoneId.systemDefault())
+            .format(dateFormatter)
     }
 }

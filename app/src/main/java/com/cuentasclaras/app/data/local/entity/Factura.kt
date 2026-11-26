@@ -1,6 +1,7 @@
 package com.cuentasclaras.app.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 enum class EstadoFactura {
@@ -8,7 +9,10 @@ enum class EstadoFactura {
     PAGADA
 }
 
-@Entity(tableName = "facturas")
+@Entity(
+    tableName = "facturas",
+    indices = [Index(value = ["fecha", "id"])]
+)
 data class Factura(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,

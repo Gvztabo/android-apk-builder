@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.data.local.dao
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Embedded
@@ -14,6 +15,7 @@ import com.cuentasclaras.app.data.local.entity.Factura
 import com.cuentasclaras.app.data.local.entity.ItemFactura
 import kotlinx.coroutines.flow.Flow
 
+@Immutable
 data class FacturaConItems(
     @Embedded val factura: Factura,
     @Relation(
@@ -32,6 +34,9 @@ interface FacturaDao {
     @Transaction
     @Query("SELECT * FROM facturas WHERE id = :facturaId LIMIT 1")
     fun observeFacturaConItems(facturaId: Long): Flow<FacturaConItems?>
+
+    @Query("SELECT COUNT(*) FROM facturas")
+    fun observeInvoiceCount(): Flow<Int>
 
     @Query("SELECT * FROM facturas WHERE id = :facturaId LIMIT 1")
     suspend fun getFacturaById(facturaId: Long): Factura?

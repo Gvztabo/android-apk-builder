@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.ui.viewmodel
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@Immutable
 data class AccountDetailUiState(
     val account: CuentaConSaldo? = null,
     val transactions: List<Transaccion> = emptyList(),
@@ -66,6 +68,14 @@ class AccountDetailViewModel(
                 desiredBalanceUsd = desiredBalanceUsd,
                 note = note
             )
+        }
+    }
+
+    fun deleteAccount(onDeleted: () -> Unit) {
+        val cuenta = uiState.value.account?.cuenta ?: return
+        viewModelScope.launch {
+            repository.deleteAccount(cuenta)
+            onDeleted()
         }
     }
 

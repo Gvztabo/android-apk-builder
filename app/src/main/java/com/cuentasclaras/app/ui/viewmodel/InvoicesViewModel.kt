@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.ui.viewmodel
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@Immutable
 data class InvoicesUiState(
     val invoices: List<FacturaConItems> = emptyList(),
     val bcvRate: BcvRateInfo? = null,

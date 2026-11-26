@@ -22,7 +22,7 @@ import com.cuentasclaras.app.data.local.entity.Transaccion
         Factura::class,
         ItemFactura::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -51,6 +51,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_transacciones_cuentaId_tipo ON transacciones(cuentaId, tipo)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_transacciones_cuentaId_fecha_id ON transacciones(cuentaId, fecha, id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_facturas_fecha_id ON facturas(fecha, id)")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -58,7 +66,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cuentas_claras.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { INSTANCE = it }
             }

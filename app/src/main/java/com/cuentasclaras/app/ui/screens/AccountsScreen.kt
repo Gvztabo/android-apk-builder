@@ -1,34 +1,45 @@
 package com.cuentasclaras.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +47,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -47,6 +60,8 @@ import com.cuentasclaras.app.ui.components.BcvRateBubble
 import com.cuentasclaras.app.ui.components.CurrencySegmentedSelector
 import com.cuentasclaras.app.ui.components.DualCurrencyText
 import com.cuentasclaras.app.ui.components.EmptyStateView
+import com.cuentasclaras.app.ui.components.GroupedCardItemSlice
+import com.cuentasclaras.app.ui.theme.EmeraldPrimary
 import com.cuentasclaras.app.ui.viewmodel.AccountsViewModel
 import com.cuentasclaras.app.util.CurrencyFormatter
 import java.util.Locale
@@ -61,104 +76,240 @@ fun AccountsScreen(
     var showAccountDialog by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        AppLogo(modifier = Modifier.size(32.dp))
-                        Text("Cuentas Claras", fontWeight = FontWeight.Bold)
+            Column {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            AppLogo(modifier = Modifier.size(30.dp))
+                            Text(
+                                text = "Cuentas Claras",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    },
+                    actions = {
+                        BcvRateBubble(
+                            bcvRate = uiState.bcvRate,
+                            history = uiState.bcvHistory,
+                            isRefreshing = uiState.isRefreshingRate,
+                            onRefresh = { viewModel.refreshBcvRate() }
+                        )
                     }
-                },
-                actions = {
-                    BcvRateBubble(
-                        bcvRate = uiState.bcvRate,
-                        history = uiState.bcvHistory,
-                        isRefreshing = uiState.isRefreshingRate,
-                        onRefresh = { viewModel.refreshBcvRate() }
-                    )
-                }
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAccountDialog = true },
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text("Nueva Cuenta", style = MaterialTheme.typography.labelLarge) }
-            )
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            }
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(16.dp)
         ) {
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
+            // Solid Emerald Hero Card matching Web
+            item(key = "hero_card", contentType = "hero") {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = EmeraldPrimary,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(22.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Saldo total",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFFD1FAE5)
+                                )
+                                DualCurrencyText(
+                                    amountUsd = uiState.totalBalanceUsd,
+                                    bcvRate = uiState.bcvRate?.usdRate,
+                                    primaryStyle = MaterialTheme.typography.headlineMedium,
+                                    primaryColor = Color.White,
+                                    secondaryColor = Color(0xFFE6FFF4)
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Color.White.copy(alpha = 0.16f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                IconButton(
+                                    onClick = { viewModel.refreshBcvRate() },
+                                    enabled = !uiState.isRefreshingRate
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Refresh,
+                                        contentDescription = "Actualizar tasa BCV",
+                                        tint = Color.White
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.18f))
+
+                        val rateText = uiState.bcvRate?.let {
+                            String.format(Locale.US, "Tasa Oficial BCV: Bs. %.4f / USD", it.usdRate)
+                        } ?: "Tasa BCV no disponible"
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = rateText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFFECFDF5)
+                            )
+                            uiState.bcvRate?.fechaValor?.takeIf { it.isNotBlank() }?.let { fecha ->
+                                Text(
+                                    text = fecha,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color(0xFFD1FAE5)
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(18.dp))
+            }
+
+            // Section Header + Inline Primary Action Button (matching Web)
+            item(key = "section_header", contentType = "header") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = "Saldo total",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                            text = "Tus Cuentas",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
-                        DualCurrencyText(
-                            amountUsd = uiState.totalBalanceUsd,
-                            bcvRate = uiState.bcvRate?.usdRate,
-                            primaryStyle = MaterialTheme.typography.titleLarge,
-                            primaryColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            secondaryColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-                        )
-                        val rateText = uiState.bcvRate?.let {
-                            String.format(Locale.US, "Tasa BCV: Bs. %.4f / USD · %s", it.usdRate, it.fechaValor)
-                        } ?: "Tasa BCV no disponible"
+                        val countLabel = if (uiState.accounts.size == 1) {
+                            "1 cuenta guardada localmente"
+                        } else {
+                            "${uiState.accounts.size} cuentas guardadas localmente"
+                        }
                         Text(
-                            text = rateText,
+                            text = countLabel,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Button(
+                        onClick = { showAccountDialog = true },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = EmeraldPrimary,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Nueva Cuenta", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            if (uiState.accounts.isEmpty()) {
+                item(key = "empty_accounts", contentType = "empty") {
+                    EmptyStateView(
+                        icon = Icons.Outlined.AccountBalanceWallet,
+                        title = "Aún no hay cuentas",
+                        subtitle = "Agrega una cuenta de efectivo, banco o billetera digital para controlar tus saldos en USD y BS."
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = { showAccountDialog = true },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = EmeraldPrimary,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
+                                Text("Crear Primera Cuenta", style = MaterialTheme.typography.labelLarge)
+                            }
+                            OutlinedButton(
+                                onClick = { viewModel.loadSampleData() },
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
+                                Text("Cargar Datos de Ejemplo", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
+                }
+            } else {
+                itemsIndexed(
+                    items = uiState.accounts,
+                    key = { _, item -> item.cuenta.id },
+                    contentType = { _, _ -> "account_row" }
+                ) { index, item ->
+                    GroupedCardItemSlice(
+                        isFirst = index == 0,
+                        isLast = index == uiState.accounts.lastIndex,
+                        hasHeader = false
+                    ) {
+                        AccountRow(
+                            item = item,
+                            bcvRate = uiState.bcvRate?.usdRate,
+                            onClick = { onAccountClick(item.cuenta.id) }
                         )
                     }
                 }
             }
 
-            item {
-                Text(
-                    text = "Tus Cuentas",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+            item(key = "bottom_spacer", contentType = "spacer") {
+                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            if (uiState.accounts.isEmpty()) {
-                item {
-                    EmptyStateView(
-                        icon = Icons.Outlined.AccountBalanceWallet,
-                        title = "Aún no hay cuentas",
-                        subtitle = "Toca \"Nueva Cuenta\" para agregar tu primer saldo en efectivo, banco o billetera."
-                    )
-                }
-            } else {
-                items(uiState.accounts, key = { it.cuenta.id }) { item ->
-                    AccountCard(
-                        item = item,
-                        bcvRate = uiState.bcvRate?.usdRate,
-                        onClick = { onAccountClick(item.cuenta.id) }
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(72.dp)) }
         }
     }
 
@@ -182,46 +333,42 @@ fun AccountsScreen(
 }
 
 @Composable
-private fun AccountCard(
+private fun AccountRow(
     item: CuentaConSaldo,
     bcvRate: Double?,
     onClick: () -> Unit
 ) {
     val displayMoneda = if (item.cuenta.moneda == "USD") "USD" else "BS"
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    val txLabel = if (item.transaccionesCount == 1) "1 movimiento" else "${item.transaccionesCount} movimientos"
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = item.cuenta.nombre,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Moneda: $displayMoneda",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            DualCurrencyText(
-                amountUsd = item.saldoActual,
-                bcvRate = bcvRate,
-                primaryStyle = MaterialTheme.typography.titleLarge,
-                horizontalAlignment = Alignment.Start
+            Text(
+                text = item.cuenta.nombre,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "$displayMoneda · $txLabel",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        DualCurrencyText(
+            amountUsd = item.saldoActual,
+            bcvRate = bcvRate,
+            primaryStyle = MaterialTheme.typography.titleLarge,
+            horizontalAlignment = Alignment.Start
+        )
     }
 }
 
@@ -245,7 +392,8 @@ private fun AccountFormDialog(
             initialAccount?.let { String.format(Locale.US, "%.2f", it.saldoInicial) } ?: ""
         )
     }
-    val rawAmount = saldoText.toDoubleOrNull()
+
+    val rawAmount = saldoText.replace(',', '.').toDoubleOrNull()
     val convertedUsd = when {
         rawAmount == null -> null
         inputCurrency == "BS" && rateAvailable -> rawAmount / bcvRate!!
@@ -254,6 +402,7 @@ private fun AccountFormDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Text(
                 text = if (initialAccount == null) "Nueva Cuenta" else "Editar Cuenta",
@@ -272,8 +421,8 @@ private fun AccountFormDialog(
 
                 Text(
                     text = "Moneda del monto inicial",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
                 CurrencySegmentedSelector(
                     selectedCurrency = inputCurrency,
@@ -304,7 +453,7 @@ private fun AccountFormDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     val amountUsd = convertedUsd ?: 0.0
                     if (nombre.isNotBlank()) {

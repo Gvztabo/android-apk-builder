@@ -1,13 +1,18 @@
 package com.cuentasclaras.app.ui.navigation
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -17,6 +22,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -60,67 +68,101 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
             currentRoute == Screen.Settings.route
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    NavigationBarItem(
-                        selected = currentRoute == Screen.Accounts.route,
-                        onClick = {
-                            navController.navigate(Screen.Accounts.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                Column {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp
+                    ) {
+                        val navColors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        NavigationBarItem(
+                            selected = currentRoute == Screen.Accounts.route,
+                            onClick = {
+                                navController.navigate(Screen.Accounts.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            },
+                            colors = navColors,
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.AccountBalanceWallet,
+                                    contentDescription = "Cuentas"
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = "Cuentas",
+                                    fontWeight = if (currentRoute == Screen.Accounts.route) FontWeight.SemiBold else FontWeight.Medium
+                                )
                             }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Outlined.AccountBalanceWallet,
-                                contentDescription = "Cuentas"
-                            )
-                        },
-                        label = { Text("Cuentas") }
-                    )
-                    NavigationBarItem(
-                        selected = currentRoute == Screen.Invoices.route,
-                        onClick = {
-                            navController.navigate(Screen.Invoices.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                        )
+                        NavigationBarItem(
+                            selected = currentRoute == Screen.Invoices.route,
+                            onClick = {
+                                navController.navigate(Screen.Invoices.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            },
+                            colors = navColors,
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.ReceiptLong,
+                                    contentDescription = "Facturas"
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = "Facturas",
+                                    fontWeight = if (currentRoute == Screen.Invoices.route) FontWeight.SemiBold else FontWeight.Medium
+                                )
                             }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Outlined.ReceiptLong,
-                                contentDescription = "Facturas"
-                            )
-                        },
-                        label = { Text("Facturas") }
-                    )
-                    NavigationBarItem(
-                        selected = currentRoute == Screen.Settings.route,
-                        onClick = {
-                            navController.navigate(Screen.Settings.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                        )
+                        NavigationBarItem(
+                            selected = currentRoute == Screen.Settings.route,
+                            onClick = {
+                                navController.navigate(Screen.Settings.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            },
+                            colors = navColors,
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Settings,
+                                    contentDescription = "Configuración"
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = "Ajustes",
+                                    fontWeight = if (currentRoute == Screen.Settings.route) FontWeight.SemiBold else FontWeight.Medium
+                                )
                             }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Settings,
-                                contentDescription = "Configuración"
-                            )
-                        },
-                        label = { Text("Ajustes") }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -128,7 +170,7 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
         NavHost(
             navController = navController,
             startDestination = Screen.Accounts.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             composable(Screen.Accounts.route) {
                 AccountsScreen(

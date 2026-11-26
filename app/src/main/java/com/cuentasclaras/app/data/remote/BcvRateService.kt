@@ -1,6 +1,7 @@
 package com.cuentasclaras.app.data.remote
 
 import android.content.Context
+import androidx.compose.runtime.Immutable
 import com.cuentasclaras.app.util.AppResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -8,9 +9,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.abs
 
 enum class BcvTrendDirection {
@@ -19,6 +20,7 @@ enum class BcvTrendDirection {
     SAME
 }
 
+@Immutable
 data class BcvRateHistoryEntry(
     val usdRate: Double,
     val fechaValor: String,
@@ -26,6 +28,7 @@ data class BcvRateHistoryEntry(
     val recordedAtMillis: Long
 )
 
+@Immutable
 data class BcvRateInfo(
     val usdRate: Double,
     val fechaValor: String,
@@ -57,7 +60,7 @@ class BcvRateService(context: Context) {
         if (!raw.isNullOrBlank()) {
             try {
                 val array = JSONArray(raw)
-                val list = mutableListOf<BcvRateHistoryEntry>()
+                val list = ArrayList<BcvRateHistoryEntry>(array.length())
                 for (i in 0 until array.length()) {
                     val obj = array.getJSONObject(i)
                     val rate = obj.optDouble("usdRate", -1.0)
@@ -93,9 +96,9 @@ class BcvRateService(context: Context) {
     fun isRateStaleForToday(): Boolean {
         val cached = getCachedRate() ?: return true
         if (cached.fetchedAtMillis <= 0L) return true
-        val dayFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val cachedDay = dayFormat.format(Date(cached.fetchedAtMillis))
-        val todayDay = dayFormat.format(Date(System.currentTimeMillis()))
+        val zone = ZoneId.systemDefault()
+        val cachedDay = Instant.ofEpochMilli(cached.fetchedAtMillis).atZone(zone).toLocalDate()
+        val todayDay = LocalDate.now(zone)
         if (cachedDay != todayDay) return true
         return System.currentTimeMillis() - cached.fetchedAtMillis >= ONE_DAY_MILLIS
     }

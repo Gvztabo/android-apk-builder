@@ -29,7 +29,9 @@ enum class TipoTransaccion {
     ],
     indices = [
         Index(value = ["cuentaId"]),
-        Index(value = ["facturaId"])
+        Index(value = ["facturaId"]),
+        Index(value = ["cuentaId", "tipo"]),
+        Index(value = ["cuentaId", "fecha", "id"])
     ]
 )
 data class Transaccion(

@@ -71,11 +71,15 @@ class FinanceRepository(
 
     fun observeAccounts(): Flow<List<CuentaConSaldo>> = cuentaDao.observeCuentasConSaldo()
 
+    fun observeAccountCount(): Flow<Int> = cuentaDao.observeAccountCount()
+
     fun observeAccount(cuentaId: Long): Flow<CuentaConSaldo?> =
         cuentaDao.observeCuentaConSaldo(cuentaId)
 
     fun observeTransactions(cuentaId: Long): Flow<List<Transaccion>> =
         transaccionDao.observeTransaccionesByCuenta(cuentaId)
+
+    fun observeInvoiceCount(): Flow<Int> = facturaDao.observeInvoiceCount()
 
     suspend fun saveAccount(account: Cuenta): Long {
         return if (account.id == 0L) {

@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.ui.viewmodel
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@Immutable
 data class AccountsUiState(
     val accounts: List<CuentaConSaldo> = emptyList(),
     val totalBalanceUsd: Double = 0.0,
@@ -63,7 +65,9 @@ class AccountsViewModel(
 
     init {
         if (repository.settings.value.autoRefreshBcv) {
-            refreshBcvRate()
+            viewModelScope.launch {
+                repository.refreshBcvRateIfStaleForToday()
+            }
         }
     }
 
@@ -96,6 +100,13 @@ class AccountsViewModel(
                     moneda = moneda
                 )
             )
+        }
+    }
+
+    fun loadSampleData() {
+        viewModelScope.launch {
+            repository.loadSampleData()
+            _snackbarMessages.emit("Datos de ejemplo cargados")
         }
     }
 
