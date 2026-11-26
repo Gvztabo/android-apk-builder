@@ -106,7 +106,8 @@ fun InvoicesScreen(
                             bcvRate = uiState.bcvRate,
                             history = uiState.bcvHistory,
                             isRefreshing = uiState.isRefreshingRate,
-                            onRefresh = { viewModel.refreshBcvRate() }
+                            onRefresh = { viewModel.refreshBcvRate() },
+                            isManualBcv = uiState.isManualBcv
                         )
                     }
                 )

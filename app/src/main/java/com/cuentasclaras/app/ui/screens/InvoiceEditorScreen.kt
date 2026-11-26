@@ -844,7 +844,8 @@ fun InvoiceEditorScreen(
                                             itemName = ""
                                             itemPriceText = ""
                                             itemQty = 1
-                                            priceFocusRequester.requestFocus()
+                                            showAddForm = false
+                                            keyboardController?.hide()
                                         }
                                     },
                                     enabled = priceUsd != null && priceUsd >= 0.0 && itemQty > 0,

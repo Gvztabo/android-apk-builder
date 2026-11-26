@@ -55,6 +55,19 @@ class BcvRateService(context: Context) {
         )
     }
 
+    private fun dedupeHistoryByRate(entries: List<BcvRateHistoryEntry>): List<BcvRateHistoryEntry> {
+        val result = ArrayList<BcvRateHistoryEntry>(MAX_HISTORY_SIZE)
+        for (entry in entries) {
+            if (!entry.usdRate.isFinite() || entry.usdRate <= 0.0) continue
+            val prev = result.lastOrNull()
+            if (prev == null || abs(prev.usdRate - entry.usdRate) > 0.0001) {
+                result.add(entry)
+                if (result.size >= MAX_HISTORY_SIZE) break
+            }
+        }
+        return result
+    }
+
     fun getCachedHistory(): List<BcvRateHistoryEntry> {
         val raw = prefs.getString(KEY_RATE_HISTORY, null)
         if (!raw.isNullOrBlank()) {
@@ -64,7 +77,7 @@ class BcvRateService(context: Context) {
                 for (i in 0 until array.length()) {
                     val obj = array.getJSONObject(i)
                     val rate = obj.optDouble("usdRate", -1.0)
-                    if (rate > 0.0) {
+                    if (rate.isFinite() && rate > 0.0) {
                         list.add(
                             BcvRateHistoryEntry(
                                 usdRate = rate,
@@ -75,7 +88,13 @@ class BcvRateService(context: Context) {
                         )
                     }
                 }
-                if (list.isNotEmpty()) return list.take(MAX_HISTORY_SIZE)
+                val cleaned = dedupeHistoryByRate(list)
+                if (cleaned.isNotEmpty()) {
+                    if (cleaned.size != list.size) {
+                        saveHistory(cleaned)
+                    }
+                    return cleaned
+                }
             } catch (_: Exception) {
                 // Fallback to cached rate below if history JSON is corrupt
             }
@@ -100,7 +119,7 @@ class BcvRateService(context: Context) {
         val cachedDay = Instant.ofEpochMilli(cached.fetchedAtMillis).atZone(zone).toLocalDate()
         val todayDay = LocalDate.now(zone)
         if (cachedDay != todayDay) return true
-        return System.currentTimeMillis() - cached.fetchedAtMillis >= ONE_DAY_MILLIS
+        return System.currentTimeMillis() - cached.fetchedAtMillis >= ONE_HOUR_MILLIS
     }
 
     private fun saveHistory(history: List<BcvRateHistoryEntry>) {
@@ -135,13 +154,10 @@ class BcvRateService(context: Context) {
         val latest = currentHistory.firstOrNull()
         val nextHistory = when {
             latest == null -> listOf(newEntry)
-            abs(newEntry.usdRate - latest.usdRate) > 0.0001 ||
-                (newEntry.fechaValor.isNotEmpty() && newEntry.fechaValor != latest.fechaValor) -> {
+            abs(newEntry.usdRate - latest.usdRate) > 0.0001 -> {
                 (listOf(newEntry) + currentHistory).take(MAX_HISTORY_SIZE)
             }
-            else -> {
-                listOf(newEntry) + currentHistory.drop(1)
-            }
+            else -> currentHistory
         }
         saveHistory(nextHistory)
     }
@@ -154,7 +170,9 @@ class BcvRateService(context: Context) {
                 requestMethod = "GET"
                 connectTimeout = 8_000
                 readTimeout = 8_000
+                useCaches = false
                 setRequestProperty("Accept", "application/json")
+                setRequestProperty("Cache-Control", "no-cache")
             }
 
             val code = connection.responseCode
@@ -167,8 +185,13 @@ class BcvRateService(context: Context) {
             val tasas = json.optJSONObject("tasas")
                 ?: return@withContext AppResult.Error("Falta el campo 'tasas' en la respuesta del BCV")
 
-            val usdRate = tasas.optDouble("USD", -1.0)
-            if (usdRate.isNaN() || usdRate <= 0.0) {
+            val usdRaw = tasas.optDouble("USD", Double.NaN)
+            val usdRate = if (usdRaw.isFinite() && usdRaw > 0.0) {
+                usdRaw
+            } else {
+                tasas.optString("USD", "").replace(',', '.').toDoubleOrNull() ?: -1.0
+            }
+            if (!usdRate.isFinite() || usdRate <= 0.0) {
                 return@withContext AppResult.Error("Tasa USD inválida en la respuesta del BCV")
             }
 
@@ -194,8 +217,8 @@ class BcvRateService(context: Context) {
         private const val KEY_ACTUALIZADO_EL = "actualizado_el"
         private const val KEY_FETCHED_AT = "fetched_at"
         private const val KEY_RATE_HISTORY = "rate_history_json"
-        private const val MAX_HISTORY_SIZE = 5
-        private const val ONE_DAY_MILLIS = 24L * 60L * 60L * 1000L
+        private const val MAX_HISTORY_SIZE = 6
+        private const val ONE_HOUR_MILLIS = 60L * 60L * 1000L
 
         fun computeTrend(history: List<BcvRateHistoryEntry>): BcvTrendDirection {
             val current = history.getOrNull(0) ?: return BcvTrendDirection.SAME

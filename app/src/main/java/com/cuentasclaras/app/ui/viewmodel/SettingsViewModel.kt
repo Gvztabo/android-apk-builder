@@ -88,11 +88,18 @@ class SettingsViewModel(
         repository.setAutoRefreshBcv(enabled)
     }
 
+    fun setManualBcvRate(rate: Double?) {
+        repository.setManualBcvRate(rate)
+    }
+
     fun refreshBcvRate() {
         viewModelScope.launch {
+            val wasManual = !repository.settings.value.autoRefreshBcv
             isRefreshingRate.value = true
             when (val result = repository.refreshBcvRate()) {
-                is AppResult.Success -> _events.emit("Tasa BCV actualizada")
+                is AppResult.Success -> _events.emit(
+                    if (wasManual) "Tasa BCV actualizada. Modo automático activado." else "Tasa BCV actualizada"
+                )
                 is AppResult.Error -> _events.emit("Error al actualizar tasa BCV (${result.message})")
             }
             isRefreshingRate.value = false

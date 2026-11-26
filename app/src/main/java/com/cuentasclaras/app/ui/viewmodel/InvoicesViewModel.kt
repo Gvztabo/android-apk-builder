@@ -25,6 +25,7 @@ data class InvoicesUiState(
     val invoices: List<FacturaConItems> = emptyList(),
     val bcvRate: BcvRateInfo? = null,
     val bcvHistory: List<BcvRateHistoryEntry> = emptyList(),
+    val isManualBcv: Boolean = false,
     val isRefreshingRate: Boolean = false
 )
 
@@ -40,12 +41,14 @@ class InvoicesViewModel(
         repository.observeInvoices(),
         repository.bcvRate,
         repository.bcvHistory,
-        isRefreshingRate
-    ) { invoices, rate, history, refreshing ->
+        isRefreshingRate,
+        repository.settings
+    ) { invoices, rate, history, refreshing, settings ->
         InvoicesUiState(
             invoices = invoices,
             bcvRate = rate,
             bcvHistory = history,
+            isManualBcv = !settings.autoRefreshBcv,
             isRefreshingRate = refreshing
         )
     }.stateIn(
@@ -53,7 +56,8 @@ class InvoicesViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = InvoicesUiState(
             bcvRate = repository.bcvRate.value,
-            bcvHistory = repository.bcvHistory.value
+            bcvHistory = repository.bcvHistory.value,
+            isManualBcv = !repository.settings.value.autoRefreshBcv
         )
     )
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteForever
@@ -33,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -53,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cuentasclaras.app.ui.components.AppLogo
@@ -61,6 +64,7 @@ import com.cuentasclaras.app.ui.theme.EmeraldPrimary
 import com.cuentasclaras.app.ui.theme.ExpenseRed
 import com.cuentasclaras.app.ui.viewmodel.SettingsViewModel
 import java.util.Locale
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +74,21 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showClearConfirmDialog by remember { mutableStateOf(false) }
+    val targetManualRate = uiState.settings.manualBcvRate ?: uiState.bcvRate?.usdRate
+    var manualRateText by remember {
+        mutableStateOf(targetManualRate?.takeIf { it > 0.0 }?.let(::formatManualRateText).orEmpty())
+    }
+
+    LaunchedEffect(uiState.settings.autoRefreshBcv) {
+        if (!uiState.settings.autoRefreshBcv) {
+            val currentParsed = manualRateText.replace(',', '.').toDoubleOrNull()
+            if (currentParsed == null ||
+                (targetManualRate != null && abs(currentParsed - targetManualRate) > 0.0001)
+            ) {
+                manualRateText = targetManualRate?.takeIf { it > 0.0 }?.let(::formatManualRateText).orEmpty()
+            }
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { msg ->
@@ -114,7 +133,8 @@ fun SettingsScreen(
                             bcvRate = uiState.bcvRate,
                             history = uiState.bcvHistory,
                             isRefreshing = uiState.isRefreshingRate,
-                            onRefresh = { viewModel.refreshBcvRate() }
+                            onRefresh = { viewModel.refreshBcvRate() },
+                            isManualBcv = !uiState.settings.autoRefreshBcv
                         )
                     }
                 )
@@ -330,9 +350,17 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
-                                val rateDesc = uiState.bcvRate?.let {
-                                    String.format(Locale.US, "Tasa actual: Bs. %.4f / USD", it.usdRate)
-                                } ?: "Sin tasa BCV en caché"
+                                val rateDesc = when {
+                                    !uiState.settings.autoRefreshBcv -> uiState.bcvRate?.let {
+                                        String.format(Locale.US, "Tasa manual activa: Bs. %.4f / USD", it.usdRate)
+                                    } ?: "Modo manual activado"
+                                    uiState.bcvRate != null -> String.format(
+                                        Locale.US,
+                                        "Tasa actual: Bs. %.4f / USD",
+                                        uiState.bcvRate!!.usdRate
+                                    )
+                                    else -> "Sin tasa BCV en caché"
+                                }
                                 Text(
                                     text = rateDesc,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -344,6 +372,51 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.setAutoRefreshBcv(it) },
                                 colors = switchColors
                             )
+                        }
+
+                        if (!uiState.settings.autoRefreshBcv) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "Valor manual del dólar (Bs. / USD)",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    OutlinedTextField(
+                                        value = manualRateText,
+                                        onValueChange = { raw ->
+                                            manualRateText = raw
+                                            val parsed = raw.replace(',', '.').toDoubleOrNull()
+                                            if (parsed != null && parsed.isFinite() && parsed > 0.0) {
+                                                viewModel.setManualBcvRate(parsed)
+                                            }
+                                        },
+                                        placeholder = { Text("Ej: 924.35") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    val parsedManual = manualRateText.replace(',', '.').toDoubleOrNull()
+                                    Text(
+                                        text = if (parsedManual != null && parsedManual.isFinite() && parsedManual > 0.0) {
+                                            String.format(Locale.US, "Aplicado en toda la app: Bs. %.4f / USD", parsedManual)
+                                        } else {
+                                            "Ingresa un valor mayor a 0 para calcular los montos en bolívares."
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
 
                         OutlinedButton(
@@ -452,4 +525,8 @@ fun SettingsScreen(
             }
         )
     }
+}
+
+private fun formatManualRateText(rate: Double): String {
+    return String.format(Locale.US, "%.4f", rate).replace(Regex("\\.?0+$"), "")
 }

@@ -42,7 +42,32 @@ class FinanceRepository(
 
     val calculatorItems: StateFlow<List<CalculatorTempItem>> = settingsService.calculatorItems
 
-    private val _bcvRate = MutableStateFlow(bcvRateService.getCachedRate())
+    private val _capturedBcvRate = MutableStateFlow(bcvRateService.getCachedRate())
+
+    private fun computeEffectiveBcvRate(
+        captured: BcvRateInfo?,
+        currentSettings: AppSettings
+    ): BcvRateInfo? {
+        val manualRate = currentSettings.manualBcvRate
+        return if (!currentSettings.autoRefreshBcv && manualRate != null && manualRate > 0.0) {
+            BcvRateInfo(
+                usdRate = manualRate,
+                fechaValor = captured?.fechaValor.orEmpty(),
+                actualizadoEl = captured?.actualizadoEl.orEmpty(),
+                fetchedAtMillis = captured?.fetchedAtMillis ?: System.currentTimeMillis()
+            )
+        } else {
+            captured
+        }
+    }
+
+    private fun syncEffectiveBcvRate() {
+        _bcvRate.value = computeEffectiveBcvRate(_capturedBcvRate.value, settings.value)
+    }
+
+    private val _bcvRate = MutableStateFlow(
+        computeEffectiveBcvRate(_capturedBcvRate.value, settings.value)
+    )
     val bcvRate: StateFlow<BcvRateInfo?> = _bcvRate.asStateFlow()
 
     private val _bcvHistory = MutableStateFlow(bcvRateService.getCachedHistory())
@@ -54,7 +79,20 @@ class FinanceRepository(
 
     fun setDefaultCurrency(currency: String) = settingsService.setDefaultCurrency(currency)
 
-    fun setAutoRefreshBcv(enabled: Boolean) = settingsService.setAutoRefreshBcv(enabled)
+    fun setAutoRefreshBcv(enabled: Boolean) {
+        if (!enabled && settings.value.manualBcvRate == null) {
+            _capturedBcvRate.value?.usdRate?.takeIf { it > 0.0 }?.let { captured ->
+                settingsService.setManualBcvRate(captured)
+            }
+        }
+        settingsService.setAutoRefreshBcv(enabled)
+        syncEffectiveBcvRate()
+    }
+
+    fun setManualBcvRate(rate: Double?) {
+        settingsService.setManualBcvRate(rate)
+        syncEffectiveBcvRate()
+    }
 
     fun addCalculatorItem(unitUsd: Double, quantity: Int) =
         settingsService.addCalculatorItem(unitUsd, quantity)
@@ -77,8 +115,12 @@ class FinanceRepository(
     suspend fun refreshBcvRate(): AppResult<BcvRateInfo> {
         return when (val result = bcvRateService.fetchLatestRate()) {
             is AppResult.Success -> {
-                _bcvRate.value = result.data
+                _capturedBcvRate.value = result.data
                 _bcvHistory.value = bcvRateService.getCachedHistory()
+                if (!settings.value.autoRefreshBcv) {
+                    settingsService.setAutoRefreshBcv(true)
+                }
+                syncEffectiveBcvRate()
                 result
             }
             is AppResult.Error -> result

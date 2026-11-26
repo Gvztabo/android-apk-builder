@@ -14,7 +14,8 @@ data class AppSettings(
     val isDarkTheme: Boolean = false,
     val largeText: Boolean = false,
     val defaultCurrency: String = "USD",
-    val autoRefreshBcv: Boolean = true
+    val autoRefreshBcv: Boolean = true,
+    val manualBcvRate: Double? = null
 )
 
 @Immutable
@@ -49,11 +50,18 @@ class AppSettingsService(context: Context) {
 
     private fun loadSettings(): AppSettings {
         val currency = prefs.getString(KEY_DEFAULT_CURRENCY, "USD")
+        val manualBits = prefs.getLong(
+            KEY_MANUAL_BCV_RATE_BITS,
+            java.lang.Double.doubleToRawLongBits(-1.0)
+        )
+        val rawManual = java.lang.Double.longBitsToDouble(manualBits)
+        val manualRate = if (rawManual.isFinite() && rawManual > 0.0) rawManual else null
         return AppSettings(
             isDarkTheme = prefs.getBoolean(KEY_DARK_THEME, false),
             largeText = prefs.getBoolean(KEY_LARGE_TEXT, false),
             defaultCurrency = if (currency == "BS") "BS" else "USD",
-            autoRefreshBcv = prefs.getBoolean(KEY_AUTO_REFRESH_BCV, true)
+            autoRefreshBcv = prefs.getBoolean(KEY_AUTO_REFRESH_BCV, true),
+            manualBcvRate = manualRate
         )
     }
 
@@ -221,11 +229,24 @@ class AppSettingsService(context: Context) {
         _settings.value = _settings.value.copy(autoRefreshBcv = enabled)
     }
 
+    fun setManualBcvRate(rate: Double?) {
+        val clean = rate?.takeIf { it.isFinite() && it > 0.0 }
+        val editor = prefs.edit()
+        if (clean != null) {
+            editor.putLong(KEY_MANUAL_BCV_RATE_BITS, java.lang.Double.doubleToRawLongBits(clean))
+        } else {
+            editor.remove(KEY_MANUAL_BCV_RATE_BITS)
+        }
+        editor.apply()
+        _settings.value = _settings.value.copy(manualBcvRate = clean)
+    }
+
     companion object {
         private const val KEY_DARK_THEME = "dark_theme"
         private const val KEY_LARGE_TEXT = "large_text"
         private const val KEY_DEFAULT_CURRENCY = "default_currency"
         private const val KEY_AUTO_REFRESH_BCV = "auto_refresh_bcv"
+        private const val KEY_MANUAL_BCV_RATE_BITS = "manual_bcv_rate_bits"
         private const val KEY_CALCULATOR_ITEMS = "calculator_items_json"
         private const val KEY_CALCULATOR_NEXT_ID = "calculator_next_id"
         private const val KEY_INVOICE_DRAFTS = "invoice_drafts_ui_json"

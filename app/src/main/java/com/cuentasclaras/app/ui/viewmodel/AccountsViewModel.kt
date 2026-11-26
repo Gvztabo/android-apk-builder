@@ -26,6 +26,7 @@ data class AccountsUiState(
     val totalBalanceUsd: Double = 0.0,
     val bcvRate: BcvRateInfo? = null,
     val bcvHistory: List<BcvRateHistoryEntry> = emptyList(),
+    val isManualBcv: Boolean = false,
     val isRefreshingRate: Boolean = false,
     val defaultCurrency: String = "USD"
 )
@@ -50,6 +51,7 @@ class AccountsViewModel(
             totalBalanceUsd = accounts.sumOf { it.saldoActual },
             bcvRate = rate,
             bcvHistory = history,
+            isManualBcv = !settings.autoRefreshBcv,
             isRefreshingRate = refreshing,
             defaultCurrency = settings.defaultCurrency
         )
@@ -59,6 +61,7 @@ class AccountsViewModel(
         initialValue = AccountsUiState(
             bcvRate = repository.bcvRate.value,
             bcvHistory = repository.bcvHistory.value,
+            isManualBcv = !repository.settings.value.autoRefreshBcv,
             defaultCurrency = repository.settings.value.defaultCurrency
         )
     )

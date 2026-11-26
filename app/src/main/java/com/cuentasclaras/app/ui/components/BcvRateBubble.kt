@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,12 +32,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cuentasclaras.app.data.remote.BcvRateHistoryEntry
 import com.cuentasclaras.app.data.remote.BcvRateInfo
 import com.cuentasclaras.app.data.remote.BcvRateService
 import com.cuentasclaras.app.data.remote.BcvTrendDirection
+import com.cuentasclaras.app.ui.theme.AdjustAmber
 import com.cuentasclaras.app.ui.theme.ExpenseRed
 import com.cuentasclaras.app.ui.theme.IncomeGreen
 import com.cuentasclaras.app.util.CurrencyFormatter
@@ -47,16 +51,22 @@ fun BcvRateBubble(
     history: List<BcvRateHistoryEntry>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
+    isManualBcv: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showDialog by remember { mutableStateOf(false) }
-    val trend = remember(history) { BcvRateService.computeTrend(history) }
+    val trend = remember(history, isManualBcv) {
+        if (isManualBcv) BcvTrendDirection.SAME else BcvRateService.computeTrend(history)
+    }
 
     Surface(
         onClick = { showDialog = true },
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(
+            1.dp,
+            if (isManualBcv) AdjustAmber.copy(alpha = 0.65f) else MaterialTheme.colorScheme.outline
+        ),
         modifier = modifier
             .padding(end = 10.dp)
             .heightIn(min = 38.dp)
@@ -67,8 +77,9 @@ fun BcvRateBubble(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val label = bcvRate?.let {
-                String.format(Locale.US, "BCV Bs. %.2f", it.usdRate)
-            } ?: "Sincronizar BCV"
+                val prefix = if (isManualBcv) "Manual" else "BCV"
+                String.format(Locale.US, "$prefix Bs. %.2f", it.usdRate)
+            } ?: if (isManualBcv) "Tasa manual" else "Sincronizar BCV"
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
@@ -76,7 +87,7 @@ fun BcvRateBubble(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            if (bcvRate != null) {
+            if (bcvRate != null && !isManualBcv) {
                 when (trend) {
                     BcvTrendDirection.UP -> Icon(
                         imageVector = Icons.Filled.ArrowUpward,
@@ -108,6 +119,7 @@ fun BcvRateBubble(
             bcvRate = bcvRate,
             history = history,
             trend = trend,
+            isManualBcv = isManualBcv,
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
             onDismiss = { showDialog = false }
@@ -120,10 +132,15 @@ private fun BcvHistoryDialog(
     bcvRate: BcvRateInfo?,
     history: List<BcvRateHistoryEntry>,
     trend: BcvTrendDirection,
+    isManualBcv: Boolean,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val displayHistory = remember(history, isManualBcv) {
+        if (isManualBcv) history else history.drop(1)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -134,7 +151,11 @@ private fun BcvHistoryDialog(
                     style = MaterialTheme.typography.titleLarge
                 )
                 Text(
-                    text = "Se actualiza automáticamente cada día",
+                    text = if (isManualBcv) {
+                        "Modo manual activo (sin actualización automática)"
+                    } else {
+                        "Se actualiza automáticamente cada día"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -158,7 +179,7 @@ private fun BcvHistoryDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Precio actual",
+                                    text = if (isManualBcv) "Precio manual activo" else "Precio actual",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -168,31 +189,33 @@ private fun BcvHistoryDialog(
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    when (trend) {
-                                        BcvTrendDirection.UP -> {
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Icon(
-                                                imageVector = Icons.Filled.ArrowUpward,
-                                                contentDescription = "Subió",
-                                                tint = IncomeGreen,
-                                                modifier = Modifier.size(18.dp)
-                                            )
+                                    if (!isManualBcv) {
+                                        when (trend) {
+                                            BcvTrendDirection.UP -> {
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Icon(
+                                                    imageVector = Icons.Filled.ArrowUpward,
+                                                    contentDescription = "Subió",
+                                                    tint = IncomeGreen,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                            BcvTrendDirection.DOWN -> {
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Icon(
+                                                    imageVector = Icons.Filled.ArrowDownward,
+                                                    contentDescription = "Bajó",
+                                                    tint = ExpenseRed,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                            BcvTrendDirection.SAME -> Unit
                                         }
-                                        BcvTrendDirection.DOWN -> {
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Icon(
-                                                imageVector = Icons.Filled.ArrowDownward,
-                                                contentDescription = "Bajó",
-                                                tint = ExpenseRed,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                        BcvTrendDirection.SAME -> Unit
                                     }
                                 }
                             }
 
-                            if (history.size >= 2) {
+                            if (!isManualBcv && history.size >= 2) {
                                 HorizontalDivider()
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -216,7 +239,7 @@ private fun BcvHistoryDialog(
                                 }
                             }
 
-                            if (bcvRate.fechaValor.isNotBlank()) {
+                            if (!isManualBcv && bcvRate.fechaValor.isNotBlank()) {
                                 Text(
                                     text = "Fecha valor: ${bcvRate.fechaValor}",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -227,26 +250,81 @@ private fun BcvHistoryDialog(
                     }
                 } else {
                     Text(
-                        text = "Tasa BCV no disponible aún.",
+                        text = if (isManualBcv) {
+                            "Modo manual activo sin valor configurado."
+                        } else {
+                            "Tasa BCV no disponible aún."
+                        },
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
 
+                if (isManualBcv) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = AdjustAmber.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, AdjustAmber.copy(alpha = 0.45f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Estás usando un valor manual. Puedes reintentar obtener la tasa oficial BCV cuando tengas conexión.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Button(
+                                onClick = onRefresh,
+                                enabled = !isRefreshing,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AdjustAmber,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isRefreshing) "Reintentando..." else "Reintentar actualización",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Text(
-                    text = "Historial reciente (últimos 5 precios)",
+                    text = if (isManualBcv) {
+                        "Último valor capturado por el teléfono"
+                    } else {
+                        "Historial de cambios"
+                    },
                     style = MaterialTheme.typography.titleMedium
                 )
 
-                if (history.isEmpty()) {
+                if (displayHistory.isEmpty()) {
                     Text(
-                        text = "Sin registros guardados.",
+                        text = if (isManualBcv) {
+                            "Aún no se ha capturado ninguna tasa BCV desde el servidor."
+                        } else {
+                            "Sin cambios anteriores registrados."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        history.forEachIndexed { index, entry ->
-                            val prev = history.getOrNull(index + 1)
+                        displayHistory.forEachIndexed { index, entry ->
+                            val prev = displayHistory.getOrNull(index + 1)
                             val diff = if (prev != null) entry.usdRate - prev.usdRate else 0.0
                             val entryTrend = when {
                                 prev == null -> BcvTrendDirection.SAME
@@ -266,12 +344,17 @@ private fun BcvHistoryDialog(
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.SemiBold
                                     )
-                                    val dateLabel = entry.fechaValor.ifBlank {
+                                    val rawDateLabel = entry.fechaValor.ifBlank {
                                         if (entry.recordedAtMillis > 0L) {
                                             CurrencyFormatter.formatDate(entry.recordedAtMillis)
                                         } else {
                                             ""
                                         }
+                                    }
+                                    val dateLabel = if (isManualBcv && index == 0) {
+                                        if (rawDateLabel.isNotBlank()) "Último capturado · $rawDateLabel" else "Último capturado"
+                                    } else {
+                                        rawDateLabel
                                     }
                                     if (dateLabel.isNotBlank()) {
                                         Text(
@@ -313,7 +396,7 @@ private fun BcvHistoryDialog(
                                     BcvTrendDirection.SAME -> Unit
                                 }
                             }
-                            if (index < history.lastIndex) {
+                            if (index < displayHistory.lastIndex) {
                                 HorizontalDivider()
                             }
                         }
@@ -322,17 +405,19 @@ private fun BcvHistoryDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = onRefresh,
-                enabled = !isRefreshing
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Actualizar", style = MaterialTheme.typography.labelLarge)
+            if (!isManualBcv) {
+                TextButton(
+                    onClick = onRefresh,
+                    enabled = !isRefreshing
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Actualizar", style = MaterialTheme.typography.labelLarge)
+                }
             }
         },
         dismissButton = {
@@ -342,3 +427,4 @@ private fun BcvHistoryDialog(
         }
     )
 }
+

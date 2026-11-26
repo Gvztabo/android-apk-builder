@@ -29,6 +29,7 @@ data class CalculatorUiState(
     val totalAvailableBalanceUsd: Double = 0.0,
     val bcvRate: BcvRateInfo? = null,
     val bcvHistory: List<BcvRateHistoryEntry> = emptyList(),
+    val isManualBcv: Boolean = false,
     val isRefreshingRate: Boolean = false,
     val defaultCurrency: String = "USD"
 )
@@ -52,7 +53,7 @@ class CalculatorViewModel(
             isRefreshingRate,
             repository.settings
         ) { rate, history, refreshing, settings ->
-            Quad(rate, history, refreshing, settings.defaultCurrency)
+            Quad(rate, history, refreshing, settings)
         }
     ) { (items, accounts), meta ->
         val sum = items.sumOf { it.subtotalUsd }
@@ -64,8 +65,9 @@ class CalculatorViewModel(
             totalAvailableBalanceUsd = round(totalAvailable * 100.0) / 100.0,
             bcvRate = meta.first,
             bcvHistory = meta.second,
+            isManualBcv = !meta.fourth.autoRefreshBcv,
             isRefreshingRate = meta.third,
-            defaultCurrency = meta.fourth
+            defaultCurrency = meta.fourth.defaultCurrency
         )
     }.stateIn(
         scope = viewModelScope,
@@ -75,6 +77,7 @@ class CalculatorViewModel(
             totalAccumulatedUsd = round(repository.calculatorItems.value.sumOf { it.subtotalUsd } * 100.0) / 100.0,
             bcvRate = repository.bcvRate.value,
             bcvHistory = repository.bcvHistory.value,
+            isManualBcv = !repository.settings.value.autoRefreshBcv,
             defaultCurrency = repository.settings.value.defaultCurrency
         )
     )
