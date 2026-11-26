@@ -1,5 +1,14 @@
 package com.cuentasclaras.app.ui.screens
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +21,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,8 +39,10 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,33 +58,36 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cuentasclaras.app.data.local.InvoiceDraftUiState
 import com.cuentasclaras.app.data.local.entity.EstadoFactura
 import com.cuentasclaras.app.data.local.entity.ItemFactura
 import com.cuentasclaras.app.data.repository.PaymentAllocation
@@ -87,6 +102,8 @@ import com.cuentasclaras.app.ui.theme.ExpenseRed
 import com.cuentasclaras.app.ui.theme.IncomeGreen
 import com.cuentasclaras.app.ui.viewmodel.InvoiceEditorViewModel
 import com.cuentasclaras.app.util.CurrencyFormatter
+import com.cuentasclaras.app.util.VoiceProductParser
+import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
@@ -104,12 +121,15 @@ fun InvoiceEditorScreen(
     val bcvRate = uiState.bcvRate?.usdRate
     val rateAvailable = bcvRate != null && bcvRate > 0.0
 
-    var showAddForm by remember { mutableStateOf(false) }
-    var itemName by remember { mutableStateOf("") }
-    var itemPriceText by remember { mutableStateOf("") }
-    var itemQty by remember { mutableIntStateOf(1) }
+    val initialDraft = remember(viewModel) { viewModel.getDraftUiState() }
+    var showAddForm by remember { mutableStateOf(initialDraft.showAddForm) }
+    var itemName by remember { mutableStateOf(initialDraft.itemName) }
+    var itemPriceText by remember { mutableStateOf(initialDraft.itemPriceText) }
+    var itemQty by remember { mutableIntStateOf(initialDraft.itemQty) }
     var itemCurrency by remember {
-        mutableStateOf(if (uiState.defaultCurrency == "BS" && rateAvailable) "BS" else "USD")
+        mutableStateOf(
+            if (initialDraft.itemCurrency == "BS" && rateAvailable) "BS" else "USD"
+        )
     }
     var editingItem by remember { mutableStateOf<ItemFactura?>(null) }
     var showAccountPickerSheet by remember { mutableStateOf(false) }
@@ -120,9 +140,63 @@ fun InvoiceEditorScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf("") }
 
-    val invoiceId = invoiceWithItems?.factura?.id ?: 0L
-    val selectedAccountIds = remember(invoiceId) { mutableStateMapOf<Long, Boolean>() }
+    val selectedAccountIds = remember(viewModel) {
+        mutableStateMapOf<Long, Boolean>().apply {
+            initialDraft.selectedAccountIds.forEach { put(it, true) }
+        }
+    }
     val selectedAccounts = uiState.accounts.filter { selectedAccountIds[it.cuenta.id] == true }
+    val selectedAccountIdSet = selectedAccountIds.entries
+        .filter { it.value }
+        .map { it.key }
+        .toSet()
+
+    LaunchedEffect(
+        isDraft,
+        invoiceWithItems?.factura?.id,
+        showAddForm,
+        itemName,
+        itemPriceText,
+        itemQty,
+        itemCurrency,
+        selectedAccountIdSet
+    ) {
+        if (invoiceWithItems != null && isDraft) {
+            viewModel.saveDraftUiState(
+                InvoiceDraftUiState(
+                    showAddForm = showAddForm,
+                    itemName = itemName,
+                    itemPriceText = itemPriceText,
+                    itemQty = itemQty,
+                    itemCurrency = itemCurrency,
+                    selectedAccountIds = selectedAccountIdSet
+                )
+            )
+        }
+    }
+
+    val latestIsDraft by rememberUpdatedState(isDraft)
+    val latestHasInvoice by rememberUpdatedState(invoiceWithItems != null)
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (latestHasInvoice && latestIsDraft) {
+                viewModel.saveDraftUiState(
+                    InvoiceDraftUiState(
+                        showAddForm = showAddForm,
+                        itemName = itemName,
+                        itemPriceText = itemPriceText,
+                        itemQty = itemQty,
+                        itemCurrency = itemCurrency,
+                        selectedAccountIds = selectedAccountIds.entries
+                            .filter { it.value }
+                            .map { it.key }
+                            .toSet()
+                    )
+                )
+            }
+        }
+    }
     val invoiceTotal = invoiceWithItems?.factura?.total ?: 0.0
     val selectedTotal = selectedAccounts.sumOf { it.saldoActual }
     val diffAfterPayRaw = selectedTotal - invoiceTotal
@@ -131,10 +205,96 @@ fun InvoiceEditorScreen(
 
     val priceFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isListening by remember { mutableStateOf(false) }
+
+    val speechRecognizer = remember(context) {
+        if (SpeechRecognizer.isRecognitionAvailable(context)) {
+            SpeechRecognizer.createSpeechRecognizer(context)
+        } else {
+            null
+        }
+    }
+
+    val startVoiceListening = remember(speechRecognizer, context, scope) {
+        {
+            if (speechRecognizer == null) {
+                scope.launch {
+                    snackbarHostState.showSnackbar("El reconocimiento de voz no está disponible en este dispositivo.")
+                }
+            } else {
+                speechRecognizer.setRecognitionListener(object : RecognitionListener {
+                    override fun onReadyForSpeech(params: Bundle?) {
+                        isListening = true
+                    }
+                    override fun onBeginningOfSpeech() {
+                        isListening = true
+                    }
+                    override fun onRmsChanged(rmsdB: Float) = Unit
+                    override fun onBufferReceived(buffer: ByteArray?) = Unit
+                    override fun onEndOfSpeech() {
+                        isListening = false
+                    }
+                    override fun onError(error: Int) {
+                        isListening = false
+                        if (error != SpeechRecognizer.ERROR_CLIENT) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("No se pudo entender el dictado. Intenta de nuevo.")
+                            }
+                        }
+                    }
+                    override fun onResults(results: Bundle?) {
+                        isListening = false
+                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        val spoken = matches?.firstOrNull().orEmpty()
+                        if (spoken.isNotBlank()) {
+                            val parsed = VoiceProductParser.parse(spoken)
+                            itemName = parsed.name
+                            itemPriceText = parsed.price?.let {
+                                String.format(Locale.US, "%.2f", it)
+                            } ?: ""
+                            itemCurrency = "USD"
+                            itemQty = 1
+                            showAddForm = true
+                        }
+                    }
+                    override fun onPartialResults(partialResults: Bundle?) = Unit
+                    override fun onEvent(eventType: Int, params: Bundle?) = Unit
+                })
+
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-VE")
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "es-ES")
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                }
+                isListening = true
+                speechRecognizer.startListening(intent)
+            }
+        }
+    }
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            startVoiceListening()
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("Se necesita permiso de micrófono para dictar productos.")
+            }
+        }
+    }
+
+    DisposableEffect(speechRecognizer) {
+        onDispose {
+            speechRecognizer?.destroy()
+        }
+    }
 
     LaunchedEffect(showAddForm) {
-        if (showAddForm) {
-            itemCurrency = if (uiState.defaultCurrency == "BS" && rateAvailable) "BS" else "USD"
+        if (showAddForm && itemPriceText.isBlank() && itemName.isBlank()) {
             priceFocusRequester.requestFocus()
             keyboardController?.show()
         }
@@ -296,7 +456,7 @@ fun InvoiceEditorScreen(
                                         ),
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(50.dp)
+                                            .heightIn(min = 56.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.AccountBalanceWallet,
@@ -304,7 +464,7 @@ fun InvoiceEditorScreen(
                                             modifier = Modifier.size(20.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Seleccionar cuentas", style = MaterialTheme.typography.labelLarge)
+                                        Text("Seleccionar cuentas", style = MaterialTheme.typography.titleMedium)
                                     }
                                 } else {
                                     OutlinedButton(
@@ -312,12 +472,12 @@ fun InvoiceEditorScreen(
                                         shape = RoundedCornerShape(16.dp),
                                         colors = ButtonDefaults.outlinedButtonColors(
                                             containerColor = Color.White,
-                                            contentColor = Color(0xFF0F172A)
+                                            contentColor = Color(0xFF171918)
                                         ),
-                                        border = BorderStroke(1.5.dp, Color(0xFFCBD5E1)),
+                                        border = BorderStroke(1.5.dp, Color(0xFFD0D5D3)),
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(50.dp)
+                                            .heightIn(min = 56.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.AccountBalanceWallet,
@@ -327,7 +487,7 @@ fun InvoiceEditorScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = "Seleccionar cuentas (${selectedAccounts.size})",
-                                            style = MaterialTheme.typography.labelLarge
+                                            style = MaterialTheme.typography.titleMedium
                                         )
                                     }
 
@@ -429,9 +589,9 @@ fun InvoiceEditorScreen(
                                         ),
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(50.dp)
+                                            .heightIn(min = 56.dp)
                                     ) {
-                                        Text("Pagar", style = MaterialTheme.typography.labelLarge)
+                                        Text("Pagar", style = MaterialTheme.typography.titleMedium)
                                     }
                                 }
                             }
@@ -443,11 +603,11 @@ fun InvoiceEditorScreen(
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(50.dp)
+                                    .heightIn(min = 56.dp)
                             ) {
                                 Icon(Icons.Outlined.CheckCircle, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Factura pagada", style = MaterialTheme.typography.labelLarge)
+                                Text("Factura pagada", style = MaterialTheme.typography.titleMedium)
                             }
                         }
                     }
@@ -455,24 +615,124 @@ fun InvoiceEditorScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Add Item Button or Form (Draft Only)
+            // Add Item Button + Mic Voice Dictation Button (Draft Only)
             if (isDraft) {
                 item(key = "add_item_section", contentType = "add_item") {
-                    if (!showAddForm) {
-                        Button(
-                            onClick = { showAddForm = true },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isDark) EmeraldPrimary else Color(0xFF0F172A),
-                                contentColor = Color.White
-                            ),
+                    if (isListening) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(2.dp, EmeraldPrimary),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp)
+                                .padding(bottom = 12.dp)
                         ) {
-                            Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Añadir producto", style = MaterialTheme.typography.labelLarge)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Mic,
+                                        contentDescription = null,
+                                        tint = EmeraldPrimary,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(
+                                            text = "Escuchando...",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = EmeraldPrimary
+                                        )
+                                        Text(
+                                            text = "Ej: \"Leche a dos con cincuenta\"",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Button(
+                                    onClick = {
+                                        speechRecognizer?.stopListening()
+                                        isListening = false
+                                    },
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = ExpenseRed,
+                                        contentColor = Color.White
+                                    ),
+                                    modifier = Modifier.heightIn(min = 56.dp)
+                                ) {
+                                    Icon(Icons.Outlined.Stop, contentDescription = "Detener", modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    if (!showAddForm) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    itemCurrency = if (uiState.defaultCurrency == "BS" && rateAvailable) "BS" else "USD"
+                                    showAddForm = true
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isDark) EmeraldPrimary else Color(0xFF171918),
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 56.dp)
+                            ) {
+                                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(22.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Añadir producto", style = MaterialTheme.typography.titleMedium)
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (isListening) {
+                                        speechRecognizer?.stopListening()
+                                        isListening = false
+                                    } else {
+                                        val hasPermission = ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.RECORD_AUDIO
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                        if (hasPermission) {
+                                            startVoiceListening()
+                                        } else {
+                                            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isListening) ExpenseRed else EmeraldPrimary,
+                                    contentColor = Color.White
+                                ),
+                                contentPadding = PaddingValues(0.dp),
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isListening) Icons.Outlined.Stop else Icons.Outlined.Mic,
+                                    contentDescription = "Dictar producto por voz",
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
                         }
                     } else {
                         Surface(
@@ -595,11 +855,11 @@ fun InvoiceEditorScreen(
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(48.dp)
+                                        .heightIn(min = 56.dp)
                                 ) {
-                                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(22.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Agregar a la factura", style = MaterialTheme.typography.labelLarge)
+                                    Text("Guardar", style = MaterialTheme.typography.titleMedium)
                                 }
                             }
                         }
@@ -663,47 +923,19 @@ fun InvoiceEditorScreen(
                         isLast = index == invoiceWithItems.items.lastIndex,
                         hasHeader = true
                     ) {
-                        if (isDraft) {
-                            val dismissState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = { value ->
-                                    if (value == SwipeToDismissBoxValue.EndToStart) {
-                                        viewModel.deleteItem(item)
-                                        true
-                                    } else {
-                                        false
-                                    }
+                        InvoiceItemRow(
+                            item = item,
+                            bcvRate = bcvRate,
+                            isDraft = isDraft,
+                            onIncrement = { viewModel.updateItemQuantity(item, item.cantidad + 1) },
+                            onDecrement = {
+                                if (item.cantidad > 1) {
+                                    viewModel.updateItemQuantity(item, item.cantidad - 1)
                                 }
-                            )
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                enableDismissFromStartToEnd = false,
-                                backgroundContent = {}
-                            ) {
-                                InvoiceItemRow(
-                                    item = item,
-                                    bcvRate = bcvRate,
-                                    isDraft = true,
-                                    onIncrement = { viewModel.updateItemQuantity(item, item.cantidad + 1) },
-                                    onDecrement = {
-                                        if (item.cantidad > 1) {
-                                            viewModel.updateItemQuantity(item, item.cantidad - 1)
-                                        }
-                                    },
-                                    onEdit = { editingItem = item },
-                                    onDelete = { viewModel.deleteItem(item) }
-                                )
-                            }
-                        } else {
-                            InvoiceItemRow(
-                                item = item,
-                                bcvRate = bcvRate,
-                                isDraft = false,
-                                onIncrement = {},
-                                onDecrement = {},
-                                onEdit = {},
-                                onDelete = {}
-                            )
-                        }
+                            },
+                            onEdit = { editingItem = item },
+                            onDelete = { viewModel.deleteItem(item) }
+                        )
                     }
                 }
             }
@@ -1094,7 +1326,7 @@ private fun StepperIconButton(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (enabled) 0.9f else 0.45f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        modifier = Modifier.size(46.dp)
+        modifier = Modifier.size(56.dp)
     ) {
         Box(
             modifier = Modifier

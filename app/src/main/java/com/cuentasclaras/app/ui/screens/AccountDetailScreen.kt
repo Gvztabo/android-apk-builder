@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -185,10 +186,10 @@ fun AccountDetailScreen(
                                     ),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(48.dp)
+                                        .heightIn(min = 56.dp)
                                 ) {
-                                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Text(" Movimiento", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Text(" Movimiento", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                                 }
                                 OutlinedButton(
                                     onClick = { showAdjustDialog = true },
@@ -196,10 +197,10 @@ fun AccountDetailScreen(
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(48.dp)
+                                        .heightIn(min = 56.dp)
                                 ) {
-                                    Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Text(" Ajustar saldo", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                                    Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Text(" Ajustar saldo", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -416,11 +417,11 @@ fun AccountDetailScreen(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .heightIn(min = 56.dp)
                 ) {
                     Text(
                         text = if (tipo == TipoTransaccion.INGRESO) "Guardar Ingreso" else "Guardar Gasto",
-                        style = MaterialTheme.typography.labelLarge
+                        style = MaterialTheme.typography.titleMedium
                     )
                 }
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -156,16 +157,16 @@ fun InvoicesScreen(
                             containerColor = EmeraldPrimary,
                             contentColor = Color.White
                         ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-                        modifier = Modifier.height(44.dp)
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        modifier = Modifier.heightIn(min = 56.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Add,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Nueva Factura", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                        Text("Nueva Factura", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
@@ -187,9 +188,9 @@ fun InvoicesScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
+                                .heightIn(min = 56.dp)
                         ) {
-                            Text("Crear Nueva Factura", style = MaterialTheme.typography.labelLarge)
+                            Text("Crear Nueva Factura", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
@@ -296,7 +297,7 @@ private fun InvoiceRow(
             }
             IconButton(
                 onClick = onDeleteClick,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(56.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.DeleteOutline,

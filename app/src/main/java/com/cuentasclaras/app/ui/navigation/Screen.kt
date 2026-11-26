@@ -9,5 +9,6 @@ sealed class Screen(val route: String) {
     data object InvoiceEditor : Screen("invoice/{facturaId}") {
         fun createRoute(facturaId: Long) = "invoice/$facturaId"
     }
+    data object Calculator : Screen("calculator")
     data object Settings : Screen("settings")
 }

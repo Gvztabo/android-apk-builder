@@ -1,10 +1,13 @@
 package com.cuentasclaras.app.ui.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
@@ -22,9 +25,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -36,11 +40,13 @@ import androidx.navigation.navArgument
 import com.cuentasclaras.app.data.repository.FinanceRepository
 import com.cuentasclaras.app.ui.screens.AccountDetailScreen
 import com.cuentasclaras.app.ui.screens.AccountsScreen
+import com.cuentasclaras.app.ui.screens.CalculatorScreen
 import com.cuentasclaras.app.ui.screens.InvoiceEditorScreen
 import com.cuentasclaras.app.ui.screens.InvoicesScreen
 import com.cuentasclaras.app.ui.screens.SettingsScreen
 import com.cuentasclaras.app.ui.viewmodel.AccountDetailViewModel
 import com.cuentasclaras.app.ui.viewmodel.AccountsViewModel
+import com.cuentasclaras.app.ui.viewmodel.CalculatorViewModel
 import com.cuentasclaras.app.ui.viewmodel.InvoiceEditorViewModel
 import com.cuentasclaras.app.ui.viewmodel.InvoicesViewModel
 import com.cuentasclaras.app.ui.viewmodel.SettingsViewModel
@@ -55,6 +61,9 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
     val accountsViewModel: AccountsViewModel = viewModel(
         factory = AccountsViewModel.Factory(repository)
     )
+    val calculatorViewModel: CalculatorViewModel = viewModel(
+        factory = CalculatorViewModel.Factory(repository)
+    )
 
     LaunchedEffect(accountsViewModel) {
         accountsViewModel.snackbarMessages.collect { message ->
@@ -65,6 +74,7 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
     val showBottomBar =
         currentRoute == Screen.Accounts.route ||
             currentRoute == Screen.Invoices.route ||
+            currentRoute == Screen.Calculator.route ||
             currentRoute == Screen.Settings.route
 
     Scaffold(
@@ -108,6 +118,10 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
                             label = {
                                 Text(
                                     text = "Cuentas",
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
                                     fontWeight = if (currentRoute == Screen.Accounts.route) FontWeight.SemiBold else FontWeight.Medium
                                 )
                             }
@@ -133,7 +147,40 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
                             label = {
                                 Text(
                                     text = "Facturas",
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
                                     fontWeight = if (currentRoute == Screen.Invoices.route) FontWeight.SemiBold else FontWeight.Medium
+                                )
+                            }
+                        )
+                        NavigationBarItem(
+                            selected = currentRoute == Screen.Calculator.route,
+                            onClick = {
+                                navController.navigate(Screen.Calculator.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            colors = navColors,
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Calculate,
+                                    contentDescription = "Calculadora"
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = "Calculadora",
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontWeight = if (currentRoute == Screen.Calculator.route) FontWeight.SemiBold else FontWeight.Medium
                                 )
                             }
                         )
@@ -152,12 +199,16 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
                             icon = {
                                 Icon(
                                     imageVector = Icons.Outlined.Settings,
-                                    contentDescription = "Configuración"
+                                    contentDescription = "Ajustes"
                                 )
                             },
                             label = {
                                 Text(
                                     text = "Ajustes",
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
                                     fontWeight = if (currentRoute == Screen.Settings.route) FontWeight.SemiBold else FontWeight.Medium
                                 )
                             }
@@ -170,6 +221,10 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
         NavHost(
             navController = navController,
             startDestination = Screen.Accounts.route,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None },
             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             composable(Screen.Accounts.route) {
@@ -223,6 +278,13 @@ fun CuentasClarasNavGraph(repository: FinanceRepository) {
                     viewModel = editorViewModel,
                     snackbarHostState = snackbarHostState,
                     onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.Calculator.route) {
+                CalculatorScreen(
+                    viewModel = calculatorViewModel,
+                    snackbarHostState = snackbarHostState
                 )
             }
 

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.cuentasclaras.app.data.local.InvoiceDraftUiState
 import com.cuentasclaras.app.data.local.dao.CuentaConSaldo
 import com.cuentasclaras.app.data.local.dao.FacturaConItems
 import com.cuentasclaras.app.data.local.entity.ItemFactura
@@ -58,6 +59,17 @@ class InvoiceEditorViewModel(
             defaultCurrency = repository.settings.value.defaultCurrency
         )
     )
+
+    fun getDraftUiState(): InvoiceDraftUiState =
+        repository.getInvoiceDraftUiState(facturaId)
+
+    fun saveDraftUiState(state: InvoiceDraftUiState) {
+        repository.saveInvoiceDraftUiState(facturaId, state)
+    }
+
+    fun clearDraftUiState() {
+        repository.clearInvoiceDraftUiState(facturaId)
+    }
 
     fun addItem(nombre: String?, precioUnitarioUsd: Double, cantidad: Int) {
         if (precioUnitarioUsd < 0.0 || cantidad <= 0) return

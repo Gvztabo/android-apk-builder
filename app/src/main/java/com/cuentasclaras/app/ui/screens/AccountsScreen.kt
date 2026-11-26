@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -235,16 +236,16 @@ fun AccountsScreen(
                             containerColor = EmeraldPrimary,
                             contentColor = Color.White
                         ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-                        modifier = Modifier.height(44.dp)
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        modifier = Modifier.heightIn(min = 56.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Add,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Nueva Cuenta", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                        Text("Nueva Cuenta", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
@@ -270,9 +271,9 @@ fun AccountsScreen(
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp)
+                                    .heightIn(min = 56.dp)
                             ) {
-                                Text("Crear Primera Cuenta", style = MaterialTheme.typography.labelLarge)
+                                Text("Crear Primera Cuenta", style = MaterialTheme.typography.titleMedium)
                             }
                             OutlinedButton(
                                 onClick = { viewModel.loadSampleData() },
@@ -280,9 +281,9 @@ fun AccountsScreen(
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp)
+                                    .heightIn(min = 56.dp)
                             ) {
-                                Text("Cargar Datos de Ejemplo", style = MaterialTheme.typography.labelLarge)
+                                Text("Cargar Datos de Ejemplo", style = MaterialTheme.typography.titleMedium)
                             }
                         }
                     }

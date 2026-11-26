@@ -293,7 +293,7 @@ fun SettingsScreen(
                                         border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
                                         modifier = Modifier
                                             .weight(1f)
-                                            .heightIn(min = 44.dp)
+                                            .heightIn(min = 56.dp)
                                             .clip(RoundedCornerShape(9.dp))
                                             .clickable { viewModel.setDefaultCurrency(code) }
                                     ) {
@@ -353,10 +353,10 @@ fun SettingsScreen(
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
+                                .heightIn(min = 56.dp)
                         ) {
-                            Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text(" Sincronizar tasa BCV ahora", style = MaterialTheme.typography.labelLarge)
+                            Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Text(" Sincronizar tasa BCV ahora", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
@@ -390,10 +390,10 @@ fun SettingsScreen(
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
+                                .heightIn(min = 56.dp)
                         ) {
-                            Icon(Icons.Outlined.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text(" Cargar datos de ejemplo", style = MaterialTheme.typography.labelLarge)
+                            Icon(Icons.Outlined.Restore, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Text(" Cargar datos de ejemplo", style = MaterialTheme.typography.titleMedium)
                         }
 
                         Button(
@@ -405,10 +405,10 @@ fun SettingsScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp)
+                                .heightIn(min = 56.dp)
                         ) {
-                            Icon(Icons.Outlined.DeleteForever, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Text(" Limpiar todos los datos", style = MaterialTheme.typography.labelLarge)
+                            Icon(Icons.Outlined.DeleteForever, contentDescription = null, modifier = Modifier.size(22.dp))
+                            Text(" Limpiar todos los datos", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }

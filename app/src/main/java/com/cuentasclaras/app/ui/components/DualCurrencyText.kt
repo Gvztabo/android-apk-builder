@@ -98,14 +98,14 @@ fun CurrencySegmentedSelector(
                     border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 44.dp)
+                        .heightIn(min = 56.dp)
                         .clip(RoundedCornerShape(9.dp))
                         .clickable(enabled = enabled) { onSelectCurrency(label) }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = label,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = when {
                                 selected -> MaterialTheme.colorScheme.onSurface

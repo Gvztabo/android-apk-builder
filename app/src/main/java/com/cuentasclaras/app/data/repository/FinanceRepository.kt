@@ -4,6 +4,8 @@ import androidx.room.withTransaction
 import com.cuentasclaras.app.data.local.AppDatabase
 import com.cuentasclaras.app.data.local.AppSettings
 import com.cuentasclaras.app.data.local.AppSettingsService
+import com.cuentasclaras.app.data.local.CalculatorTempItem
+import com.cuentasclaras.app.data.local.InvoiceDraftUiState
 import com.cuentasclaras.app.data.local.dao.CuentaConSaldo
 import com.cuentasclaras.app.data.local.dao.FacturaConItems
 import com.cuentasclaras.app.data.local.entity.Cuenta
@@ -38,6 +40,8 @@ class FinanceRepository(
 
     val settings: StateFlow<AppSettings> = settingsService.settings
 
+    val calculatorItems: StateFlow<List<CalculatorTempItem>> = settingsService.calculatorItems
+
     private val _bcvRate = MutableStateFlow(bcvRateService.getCachedRate())
     val bcvRate: StateFlow<BcvRateInfo?> = _bcvRate.asStateFlow()
 
@@ -51,6 +55,24 @@ class FinanceRepository(
     fun setDefaultCurrency(currency: String) = settingsService.setDefaultCurrency(currency)
 
     fun setAutoRefreshBcv(enabled: Boolean) = settingsService.setAutoRefreshBcv(enabled)
+
+    fun addCalculatorItem(unitUsd: Double, quantity: Int) =
+        settingsService.addCalculatorItem(unitUsd, quantity)
+
+    fun removeCalculatorItem(itemId: Long) =
+        settingsService.removeCalculatorItem(itemId)
+
+    fun clearCalculatorItems() =
+        settingsService.clearCalculatorItems()
+
+    fun getInvoiceDraftUiState(facturaId: Long): InvoiceDraftUiState =
+        settingsService.getInvoiceDraftUiState(facturaId)
+
+    fun saveInvoiceDraftUiState(facturaId: Long, state: InvoiceDraftUiState) =
+        settingsService.saveInvoiceDraftUiState(facturaId, state)
+
+    fun clearInvoiceDraftUiState(facturaId: Long) =
+        settingsService.clearInvoiceDraftUiState(facturaId)
 
     suspend fun refreshBcvRate(): AppResult<BcvRateInfo> {
         return when (val result = bcvRateService.fetchLatestRate()) {
@@ -162,6 +184,7 @@ class FinanceRepository(
             }
             facturaDao.deleteFactura(factura)
         }
+        settingsService.clearInvoiceDraftUiState(factura.id)
     }
 
     suspend fun addInvoiceItem(
@@ -225,6 +248,7 @@ class FinanceRepository(
                 facturaDao.updateFacturaTotal(facturaId, total)
                 facturaDao.updateFacturaEstado(facturaId, EstadoFactura.PAGADA)
             }
+            settingsService.clearInvoiceDraftUiState(facturaId)
             AppResult.Success(Unit)
         } catch (e: Exception) {
             AppResult.Error(e.localizedMessage ?: "No se pudo completar el pago", e)
@@ -243,6 +267,8 @@ class FinanceRepository(
                 // Ignore if sqlite_sequence is not yet created
             }
         }
+        settingsService.clearCalculatorItems()
+        settingsService.clearAllInvoiceDraftUiStates()
     }
 
     suspend fun loadSampleData() {
